@@ -479,29 +479,29 @@ def plot_all(loads, gps_loc, time, N, P, fig_path):
     """
 
     fig, ax = surface_plot(loads=loads, gps_loc=gps_loc, time=4, 
-                                            fig_path=fig_path)
+                           fig_path=fig_path)
     plt.show()
 
     fig, ax = interpolation(loads=loads, gps_loc=gps_loc, time=time,
-                                             N=N, fig_path=fig_path)
+                            N=N, fig_path=fig_path)
     plt.show()
 
     fig, ax = triangular_grid(loads=loads, gps_loc=gps_loc, time=time,
-                                               N=N, fig_path=fig_path)
+                              N=N, fig_path=fig_path)
     plt.show()
 
     fig, ax = contour_plot(loads=loads, gps_loc=gps_loc, time=time,
-                                             N=N, fig_path=fig_path)
+                           N=N, fig_path=fig_path)
     plt.show()
 
     fig, ax = voronoi(gps_loc=gps_loc, N=N, fig_path=fig_path)
     plt.show()
 
     fig, ax = spatial_heterogeneity(loads=loads, time=time, 
-                                                    N=N, fig_path=fig_path)
+                                    N=N, fig_path=fig_path)
     plt.show()
 
     fig, ax = temporal_heterogeneity(loads=loads, time=time, 
-                                                    P=P, fig_path=fig_path)
+                                     P=P, fig_path=fig_path)
     plt.show()
 
