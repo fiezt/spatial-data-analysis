@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.mlab as ml
 import matplotlib.pyplot as plt
+import matplotlib
 from matplotlib import cm
 from matplotlib.colors import LightSource
 import os
@@ -201,7 +202,8 @@ def triangular_grid(loads, gps_loc, time, N, fig_path, filename='triangle.png'):
     return fig, ax
 
 
-def contour_plot(loads, gps_loc, time, N, fig_path, contours=10, filename='contours.png'):
+def contour_plot(loads, gps_loc, time, N, fig_path, title,
+                 contours=10, filename='contours.png'):
     """Create contour plot of the load data on the map.
 
     :param loads: Numpy array with each row containing the load for a day of 
@@ -211,6 +213,7 @@ def contour_plot(loads, gps_loc, time, N, fig_path, contours=10, filename='conto
     :param time: Column index to get the load data from.
     :param N: Number of samples (locations).
     :param fig_path: Path to save file plot to.
+    :param title: Figure title for the plot.
     :param contours: Number of contour levels to use.
     :param filename: Name of the file to save.
 
@@ -235,6 +238,7 @@ def contour_plot(loads, gps_loc, time, N, fig_path, contours=10, filename='conto
     # Plotting background image of the map.
     im = imread(os.path.join(fig_path, 'belltown.png'))
     ax.imshow(im)
+    ax.set_title(title, fontsize=40)
 
     ax.invert_yaxis()
 
@@ -245,8 +249,12 @@ def contour_plot(loads, gps_loc, time, N, fig_path, contours=10, filename='conto
     # Resizing the color bar to be size of image and adding it to the figure.
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.15)
-    cbar = plt.colorbar(cax=cax)
-    cbar.ax.tick_params(labelsize=24) 
+    cbar = plt.colorbar(cax=cax, label='Load')
+    cbar.ax.tick_params(labelsize=30) 
+
+    text = cbar.ax.yaxis.label
+    font = matplotlib.font_manager.FontProperties(size=40)
+    text.set_font_properties(font)
 
     ax.axis('off')
     plt.tight_layout()
@@ -373,7 +381,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
     return new_regions, np.asarray(new_vertices)
 
 
-def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogenity.png'):
+def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogeneity.png'):
     """Plot histogram of the loads at a given time to demonstrate spatial heterogeneity.
 
     :param loads: Numpy array with each row containing the load for a day of 
@@ -417,7 +425,7 @@ def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogeni
     return fig, ax
 
 
-def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heterogenity.png'):
+def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heterogeneity.png'):
     """Plot average load across belltown at each time and hour combination
     to demonstrate temporal heterogeneity. 
 
@@ -447,11 +455,25 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
     plt.setp(ax.get_yticklabels(), fontsize=22)
     ax.yaxis.set_ticks_position('left')
 
-    plt.bar(bins, counts, 1, color='red', align='center')
+    plt.bar(bins, counts, color='red')
+
+    ax.axvline(x=0.2, color='black')
+    ax.axvline(x=10, color='black')
+    ax.axvline(x=20, color='black')
+    ax.axvline(x=30, color='black')
+    ax.axvline(x=40, color='black')
+    ax.axvline(x=50, color='black')
+    ax.axvline(x=59.7, color='black')
 
     plt.title('Temporal Heterogeneity', fontsize=22)
-    plt.xlabel('Blockface Key', fontsize=22)
     plt.ylabel('Load', fontsize=22)
+
+    ax.annotate('Monday',xy=(2,-.05),xytext=(2,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Tuesday',xy=(12,-.05),xytext=(12,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Wednesday',xy=(20.65,-.05),xytext=(20.65,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Thursday',xy=(31.90,-.05),xytext=(31.90,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Friday',xy=(43.1,-.05),xytext=(43.1,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Saturday',xy=(51.9,-.05),xytext=(51.9,-.05), annotation_clip=False, fontsize=16)
 
     plt.tight_layout()
 
