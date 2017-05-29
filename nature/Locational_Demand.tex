@@ -66,7 +66,7 @@ As discussed previously, the occupancy of parking exhibits spatial heterogeneity
 \end{figure}
 
 \noindent
-Although in figure 1a it can be observed that across Belltown there is a similar average load on Monday at 10:00 AM and 5:00 PM, the contour plot reveals that locational demand changes over a course of a day. In the morning parking is spread more uniformly across the neighborhood as people arrive to work. In the evening the parking becomes much more concentrated in the center of the neighborhood where many of the popular restaurants and bars are concentrated.
+Although in figure 1a it can be observed that across Belltown there is a similar average load on Monday at 10:00 AM and 5:00 PM, the contour plot reveals that locational demand changes over a course of a day. In the morning parking is spread more uniformly across the neighborhood as people arrive to work. In the evening the parking becomes much more concentrated in the center of the neighborhood where many of the popular restaurants and bars are located.
 \newline
 \indent
 Using a GMM we can model the centers of demand and give an estimate the influence the centers of demand have on neighboring blockfaces. A GMM can be used as an unsupervised clustering method to find partitions in a population containing similar samples. We consider a Multivariate GMM in which each sample $\bar{x}_i$ is a vector containing spatial and occupancy data as $\bar{x}_i = [x_{\text{latitude}}, \ x_{\text{longitude}}, \ x_{\text{load}}]$. The purpose is to find which of the K possible mixture components each sample belongs to with the highest probability. Each mixture component has a prior on the probability of a sample belonging to it, $P(C_j) = \pi_j$. The likelihood of a sample belonging to a mixture component is then given as a Multivariate Gaussian Distribution 
@@ -92,8 +92,14 @@ P(C_j) = \frac{1}{n}\sum_{i=1}^nP(C_j|\bar{x}_i)
 At convergence each sample $x_i$ is assigned the component label which maximizes the posterior probability $P(C_j|\bar{x}_i)$, and the component parameters are recorded. 
 \newline
 \indent
-The GMM also involves a model selection problem in selecting the appropriate number of mixture components. We used both the Akaike Information Criterion and the Bayesian Information Criterion when choosing the model. The Akaike Information Criterion attempts to find the model that describes the unknown reality most adequately, while the Bayesian Information Criterion 
-
+The GMM also involves a model selection problem in selecting the appropriate number of mixture components. We used both the Akaike Information Criterion (AIC) and the Bayesian Information Criterion (BIC) when choosing the model, whose equations are given as follows.
+\begin{equation}
+\text{AIC} = -2\text{ln}(L) + 2k
+\end{equation}
+\begin{equation}
+\text{BIC} = -2\text{ln}(L) + \text{ln}(n)k
+\end{equation}
+In each of these models, $L$ is the maximized log likelihood of the GMM, $n$ is the number of data points used in the GMM, and $k$ is the degrees of freedom in the GMM. In a GMM containing $C$ components with three dimensional data, there are seven degrees of freedom for each component. Three degrees of freedom come both the diagonal covariance matrix and the mean vector, and the final degree of freedom comes from the mixing weight. In total the number of parameters for the complete GMM is then $k = 7 \cdot C$.
 \begin{figure}[H]
 \begin{subfigure}[t]{0.45\textwidth}
 \centering
@@ -110,30 +116,25 @@ The GMM also involves a model selection problem in selecting the appropriate num
 \caption{}
 \label{fig:image2}
 \end{figure}
+\noindent
+The AIC is known to often select a more complex model than the BIC. For this reason we considered both criterion and chose to use four components in our model.
+\begin{figure}[H]
+\begin{subfigure}[t]{0.45\textwidth}
+\centering
+\includegraphics[width=.99\textwidth]{../figs/monday_10am_gmm.png}
+\caption{GMM applied to the Belltown neighborhood at 10:00 AM on Monday.}
+\label{fig:subim1}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.45\textwidth}
+\centering
+\includegraphics[width=.99\textwidth]{../figs/monday_5pm_gmm.png}
+\caption{GMM applied to the Belltown neighborhood at 5:00 PM on Monday.}
+\label{fig:subim2}
+\end{subfigure}
+\caption{}
+\label{fig:image2}
+\end{figure}
 
-% \begin{figure}[H]
-% \centering
-% \includegraphics[height=8cm, width=8cm, keepaspectratio]{../figs/aic_model.png}
-% \caption{Akaike information criterion for model selection.}
-% \end{figure}
-
-% \begin{figure}[H]
-% \centering
-% \includegraphics[height=8cm, width=8cm, keepaspectratio]{../figs/bic_model.png}
-% \caption{Bayesian information criterion for model selection.}
-% \end{figure}
-
-% \begin{figure}[H]
-% \centering
-% \includegraphics[height=8cm, width=8cm, keepaspectratio]{../figs/likelihood_model.png}
-% \caption{Log likelihood for model selection.}
-% \end{figure}
-
-% \begin{figure}[H]
-% \centering
-% \includegraphics[height=8cm, width=8cm, keepaspectratio]{../figs/interpolation.png}
-% \caption{Interpolation plot of the Belltown neighborhood.}
-% \end{figure}
 
 % \begin{figure}[H]
 % \centering

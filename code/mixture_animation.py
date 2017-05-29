@@ -35,7 +35,7 @@ def init_animation(gps_loc, num_comps, N, fig_path):
     bttmright = [47.607274, -122.334786]
     imgsize = [1135,864]
 
-    mp = MapOverlay(upleft, bttmright, imgsize)
+    mp = MapOverlay(upleft, bttmright, img size)
 
     # Converting the gps locations to pixel positions.
     pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
@@ -115,7 +115,7 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
     scaler = MinMaxScaler().fit(cluster_data)
     cluster_data = scaler.transform(cluster_data)
     
-    gmm = mixture.GaussianMixture(n_init=100, n_components=num_comps, 
+    gmm = mixture.GaussianMixture(n_init=200, n_components=num_comps, 
                                   covariance_type='diag').fit(cluster_data)
     
     # Scaling the mean and covariances back to gps coordinates.

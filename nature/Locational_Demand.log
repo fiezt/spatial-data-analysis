@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016) (preloaded format=pdflatex 2016.5.22)  29 MAY 2017 09:23
+This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016) (preloaded format=pdflatex 2016.5.22)  29 MAY 2017 14:01
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -298,7 +298,53 @@ Package: subcaption 2016/02/20 v1.1-142 Sub-captions (AR)
 \c@subfigure=\count114
 \c@subtable=\count115
 )
-(./Locational_Demand.aux)
+(./Locational_Demand.aux
+
+LaTeX Warning: Label `fig:subim1' multiply defined.
+
+
+LaTeX Warning: Label `sub@fig:subim1' multiply defined.
+
+
+LaTeX Warning: Label `fig:subim2' multiply defined.
+
+
+LaTeX Warning: Label `sub@fig:subim2' multiply defined.
+
+
+LaTeX Warning: Label `fig:image2' multiply defined.
+
+
+LaTeX Warning: Label `fig:subim1' multiply defined.
+
+
+LaTeX Warning: Label `sub@fig:subim1' multiply defined.
+
+
+LaTeX Warning: Label `fig:subim2' multiply defined.
+
+
+LaTeX Warning: Label `sub@fig:subim2' multiply defined.
+
+
+LaTeX Warning: Label `fig:image2' multiply defined.
+
+
+LaTeX Warning: Label `fig:subim1' multiply defined.
+
+
+LaTeX Warning: Label `sub@fig:subim1' multiply defined.
+
+
+LaTeX Warning: Label `fig:subim2' multiply defined.
+
+
+LaTeX Warning: Label `sub@fig:subim2' multiply defined.
+
+
+LaTeX Warning: Label `fig:image2' multiply defined.
+
+)
 \openout1 = `Locational_Demand.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 18.
@@ -315,8 +361,7 @@ LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 18.
 LaTeX Font Info:    ... okay on input line 18.
 LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 18.
 LaTeX Font Info:    Try loading font information for TS1+cmr on input line 18.
-
-(/usr/local/texlive/2016/texmf-dist/tex/latex/base/ts1cmr.fd
+ (/usr/local/texlive/2016/texmf-dist/tex/latex/base/ts1cmr.fd
 File: ts1cmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    ... okay on input line 18.
@@ -468,33 +513,48 @@ onday_10am.png> <../figs/monday_5pm.png>]
 File: ../figs/aic_model.png Graphic file (type png)
 
 <use ../figs/aic_model.png>
-Package pdftex.def Info: ../figs/aic_model.png used on input line 100.
+Package pdftex.def Info: ../figs/aic_model.png used on input line 106.
 (pdftex.def)             Requested size: 209.27559pt x 139.51991pt.
 
 <../figs/bic_model.png, id=33, 433.62pt x 289.08pt>
 File: ../figs/bic_model.png Graphic file (type png)
 
 <use ../figs/bic_model.png>
-Package pdftex.def Info: ../figs/bic_model.png used on input line 106.
+Package pdftex.def Info: ../figs/bic_model.png used on input line 112.
 (pdftex.def)             Requested size: 209.27559pt x 139.51991pt.
 
-Underfull \hbox (badness 6825) in paragraph at lines 107--107
+Underfull \hbox (badness 6825) in paragraph at lines 113--113
 []\OT1/cmr/m/n/9 (b) |Bayesian in-for-ma-tion cri-te-rion for model
  []
 
-[3 <../figs/aic_model.png> <../figs/bic_model.png>] (./Locational_Demand.aux)
+<../figs/monday_10am_gmm.png, id=34, 1300.86pt x 1156.32pt>
+File: ../figs/monday_10am_gmm.png Graphic file (type png)
 
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+<use ../figs/monday_10am_gmm.png>
+Package pdftex.def Info: ../figs/monday_10am_gmm.png used on input line 124.
+(pdftex.def)             Requested size: 209.27559pt x 186.02069pt.
+
+<../figs/monday_5pm_gmm.png, id=35, 1300.86pt x 1156.32pt>
+File: ../figs/monday_5pm_gmm.png Graphic file (type png)
+
+<use ../figs/monday_5pm_gmm.png>
+Package pdftex.def Info: ../figs/monday_5pm_gmm.png used on input line 130.
+(pdftex.def)             Requested size: 209.27559pt x 186.02069pt.
+ [3 <../figs/aic_model.png> <../figs/bic_model.png>] [4 <../figs/monday_10am_gm
+m.png> <../figs/monday_5pm_gmm.png>]
+(./Locational_Demand.aux)
+
+LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 5803 strings out of 493014
- 88369 string characters out of 6133351
- 161255 words of memory out of 5000000
- 9261 multiletter control sequences out of 15000+600000
+ 5813 strings out of 493014
+ 88656 string characters out of 6133351
+ 161336 words of memory out of 5000000
+ 9269 multiletter control sequences out of 15000+600000
  11187 words of font info for 44 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 38i,8n,39p,1233b,463s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 38i,9n,39p,1233b,463s stack positions out of 5000i,500n,10000p,200000b,80000s
 </usr/local/texlive/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb
 ></usr/local/texlive/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb>
 </usr/local/texlive/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><
@@ -509,10 +569,10 @@ ve/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/local/texlive/
 2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2
 016/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb></usr/local/texlive/201
 6/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb>
-Output written on Locational_Demand.pdf (3 pages, 1639307 bytes).
+Output written on Locational_Demand.pdf (4 pages, 4072216 bytes).
 PDF statistics:
- 83 PDF objects out of 1000 (max. 8388607)
- 51 compressed objects within 1 object stream
+ 90 PDF objects out of 1000 (max. 8388607)
+ 53 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 31 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 41 words of extra memory for PDF output out of 10000 (max. 10000000)
 

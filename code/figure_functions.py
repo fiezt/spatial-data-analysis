@@ -6,6 +6,8 @@ from matplotlib import cm
 from matplotlib.colors import LightSource
 import os
 from sklearn.preprocessing import MinMaxScaler
+from sklearn import mixture
+from matplotlib.patches import Ellipse
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.misc import imread
 import seaborn as sns
@@ -484,6 +486,185 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
     return fig, ax
 
 
+def mixture_plot(loads, gps_loc, times, N, fig_path, 
+                 default_means=np.array([[47.61337195, -122.34394369], [47.6144188, -122.34992362],
+                                         [47.61707117, -122.34971354], [47.61076144, -122.34305349]]),
+                 num_comps=4, shape=None, filename='mixture_plot.png', 
+                 title='Gaussian Mixture Model on Average Load Distribution and Location'):
+    
+    """Initializing figure for animation.
+    
+    :param loads: 2d numpy array with each row containing the load for a day of 
+    week and time, where each column is a day of week and hour.
+    :param gps_loc: Numpy array, each row containing the lat and long of a block.
+    :param times: Column index to get the load data from.
+    :param N: The number of samples (blocks) in the data.
+    :param num_comps: Number of mixture components for the model.
+    :param fig_path: path to read background figure from.
+    :param default_means: Numpy array, each row containing an array of the 
+    lat and long to use as the default mean so colors will stay the same
+    when making several plots.
+    :param shape: tuple of the row and col dimension of subplots.
+    :param filename: Name to save the file as.
+    :param title: Title for the figure.
+    
+    :return fig: Figure object containing the GMM model on the map.
+    :return ax: ax object.
+    :return means: Numpy array where each row contains an array of the lat and
+    long of a centroid of the GMM.
+    """
+    
+    upleft, bttmright, imgsize = setup_image()
+
+    mp = MapOverlay(upleft, bttmright, imgsize)
+
+    # Converting the gps locations to pixel positions.
+    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
+
+    # Setting center of image.
+    center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
+    pix_center = mp.to_image_pixel_position(list(center))
+    
+    if isinstance(times, list):
+        num_figs = len(times)
+    else:
+        num_figs = 1
+    
+    if shape == None:
+        fig = plt.figure(figsize=(18*num_figs, 16))
+        fs = 35*num_figs
+        fs_x = 35
+    else:
+        fig = plt.figure(figsize=(18*shape[1], 16*shape[0]))
+        fs = 35*shape[1]
+        fs_x = 35*shape[1]
+    
+    for fig_count in range(1, num_figs+1):
+        
+        if shape == None:
+            ax = fig.add_subplot(1, num_figs, fig_count)
+        else:
+            ax = fig.add_subplot(shape[0], shape[1], fig_count)
+            
+        ax.set_xlim((min(pixpos[:,0]), max(pixpos[:,0])))
+        ax.set_ylim((min(pixpos[:,1]), max(pixpos[:,1])))
+        
+        if isinstance(times, list):
+            time = times[fig_count-1]
+        else:
+            time = times
+        
+        ax.invert_yaxis()
+
+        ax.axes.get_xaxis().set_ticks([])
+        ax.axes.get_yaxis().set_ticks([])
+
+        im = imread(os.path.join(fig_path, "belltown.png"))
+        ax.imshow(im)
+
+        # Adding in the midpoints of the block faces to the map as points.
+        scatter = ax.scatter(pixpos[:, 0], pixpos[:, 1], s=175, color='red')
+
+        ax.xaxis.label.set_fontsize(fs_x)
+
+        scatter_centroid = ax.scatter([], [], s=500, color='red')
+
+        patches = [Ellipse(xy=(0, 0), width=0, height=0, angle=0, edgecolor='black', 
+                   facecolor='none', lw='4') for comp in range(2*num_comps)]
+
+        ellipses = [ax.add_patch(patches[comp]) for comp in range(2*num_comps)]
+
+        days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
+
+        colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
+
+        cluster_data = np.hstack((loads[:, time, None], gps_loc))
+
+        # Saving the cluster data prior to any scaling for plotting.
+        cluster_data_true = cluster_data
+
+        scaler = MinMaxScaler().fit(cluster_data)
+        cluster_data = scaler.transform(cluster_data)
+
+        gmm = mixture.GaussianMixture(n_init=200, n_components=num_comps, 
+                                      covariance_type='diag').fit(cluster_data)
+
+        # Scaling the mean and covariances back to gps coordinates.
+        means = np.vstack(([(mean[1:] - scaler.min_[1:])/(scaler.scale_[1:]) for mean in gmm.means_]))
+        covs = np.dstack(([np.diag((cov[1:])/(scaler.scale_[1:]**2)) for cov in gmm.covariances_])).T
+
+        labels = gmm.predict(cluster_data)    
+
+        color_codes = {}
+        for i in range(num_comps):
+
+            # Finding the default centroid closest to the current centroid.
+            dists = [(j, np.linalg.norm(means[i] - default_means[j])) for j in range(num_comps)]
+            best_colors = sorted(dists, key=lambda item:item[1])
+
+            # Finding the color that is unused that is closest to the current centroid.
+            unused_colors = [color[0] for color in best_colors if color[0] 
+                             not in color_codes.values()]
+
+            # Choosing the closest centroid that is not already used.
+            choice = unused_colors[0]
+            color_codes[i] = choice
+
+        # Setting the cluster colors to keep the colors the same each iteration.
+        scatter.set_color([colors[color_codes[labels[i]]] for i in range(len(labels))]) 
+
+        num = 0
+
+        # Updating the ellipses for each of the components.
+        for i in range(num_comps):
+            lambda_, v = np.linalg.eig(covs[i])
+            lambda_ = np.sqrt(lambda_)
+
+            # Getting the ellipses for the 1st and 2nd standard deviations.
+            for j in [1, 2]:
+
+                # Converting mean in gps coords to pixel positions.
+                xy = mp.to_image_pixel_position(list(means[i,:]))
+
+                # Width and height of the ellipses in gps coords.
+                width = lambda_[0]*j*2
+                height = lambda_[1]*j*2 
+
+                # Center of the ellipse in pixel positions.
+                new_center = (center[0]+width, center[1]+height)
+                new_center = mp.to_image_pixel_position(list(new_center))
+
+                # New width and height of the ellipses in pixel positions.
+                width = abs(new_center[0] - pix_center[0])
+                height = abs(new_center[1] - pix_center[1])
+
+                # Updating the ellipses for the animation.
+                patches[num].center = xy
+                patches[num].width = width
+                patches[num].height = height
+                patches[num].edgecolor = colors[color_codes[i]]
+
+                num += 1
+
+        # Converting the centroids to pixel positions from gps coords.
+        pix_means = np.array([mp.to_image_pixel_position(list(means[i,:])) for i in range(len(means))])
+
+        # Updating the centroids for the animations.
+        scatter_centroid.set_offsets(pix_means)
+
+        hour = time % 10
+        day = time/10
+
+        ax.set_xlabel(days[day] + ' ' + str(8+hour) + ':00')
+
+    plt.tight_layout()
+    fig.suptitle(title, fontsize=fs)
+
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    
+    return fig, ax, means
+
+
 def plot_all(loads, gps_loc, time, N, P, fig_path):
     """Produce all plots including surface plot, interpolation, triangular 
     grid, contour plot, voronoi, spatial_heterogeneity, temporal_heterogeneity.
@@ -527,3 +708,5 @@ def plot_all(loads, gps_loc, time, N, P, fig_path):
                                      P=P, fig_path=fig_path)
     plt.show()
 
+    fig, ax, means = mixture_plot(loads, gps_loc, times=time, N=N, fig_path=fig_path)
+    plt.show()
