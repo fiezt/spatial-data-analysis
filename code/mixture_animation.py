@@ -35,7 +35,7 @@ def init_animation(gps_loc, num_comps, N, fig_path):
     bttmright = [47.607274, -122.334786]
     imgsize = [1135,864]
 
-    mp = MapOverlay(upleft, bttmright, img size)
+    mp = MapOverlay(upleft, bttmright, imgsize)
 
     # Converting the gps locations to pixel positions.
     pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
@@ -57,12 +57,12 @@ def init_animation(gps_loc, num_comps, N, fig_path):
     ax.imshow(im)
 
     # Adding in the midpoints of the block faces to the map as points.
-    scatter = ax.scatter(pixpos[:, 0], pixpos[:, 1], s=175, color='red')
+    scatter = ax.scatter(pixpos[:, 0], pixpos[:, 1], s=175, color='red', edgecolor='black')
     
     ax.xaxis.label.set_fontsize(25)
     ax.set_title('Gaussian Mixture Model on Average Load Distribution and Location', fontsize=25)
     
-    scatter_centroid = ax.scatter([], [], s=500, color='red')
+    scatter_centroid = ax.scatter([], [], s=500, color='red', edgecolor='black')
 
     patches = [Ellipse(xy=(0, 0), width=0, height=0, angle=0, edgecolor='black', 
                facecolor='none', lw='4') for comp in range(2*num_comps)]
@@ -104,9 +104,13 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
     time = times[frame]
 
     days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
-    
-    colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
-    
+
+
+    if num_comps == 4:
+        colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
+    else:
+        colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
+        
     cluster_data = np.hstack((loads[:, time, None], gps_loc))
     
     # Saving the cluster data prior to any scaling for plotting.
@@ -141,6 +145,7 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
     
     # Setting the cluster colors to keep the colors the same each iteration.
     scatter.set_color([colors[color_codes[labels[i]]] for i in range(len(labels))]) 
+    scatter.set_edgecolor(['black' for i in range(len(labels))])
     
     num = 0
     

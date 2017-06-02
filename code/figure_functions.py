@@ -532,12 +532,12 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
     
     if shape == None:
         fig = plt.figure(figsize=(18*num_figs, 16))
-        fs = 35*num_figs
+        fs = 35
         fs_x = 35
     else:
         fig = plt.figure(figsize=(18*shape[1], 16*shape[0]))
-        fs = 35*shape[1]
-        fs_x = 35*shape[1]
+        fs = 35
+        fs_x = 35
     
     for fig_count in range(1, num_figs+1):
         
@@ -546,8 +546,8 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
         else:
             ax = fig.add_subplot(shape[0], shape[1], fig_count)
             
-        ax.set_xlim((min(pixpos[:,0]), max(pixpos[:,0])))
-        ax.set_ylim((min(pixpos[:,1]), max(pixpos[:,1])))
+        ax.set_xlim((min(pixpos[:,0])-100, max(pixpos[:,0])+100))
+        ax.set_ylim((min(pixpos[:,1])-100, max(pixpos[:,1])+100))
         
         if isinstance(times, list):
             time = times[fig_count-1]
@@ -563,11 +563,11 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
         ax.imshow(im)
 
         # Adding in the midpoints of the block faces to the map as points.
-        scatter = ax.scatter(pixpos[:, 0], pixpos[:, 1], s=175, color='red')
+        scatter = ax.scatter(pixpos[:, 0], pixpos[:, 1], s=175, color='red', edgecolor='black')
 
         ax.xaxis.label.set_fontsize(fs_x)
 
-        scatter_centroid = ax.scatter([], [], s=500, color='red')
+        scatter_centroid = ax.scatter([], [], s=500, color='red', edgecolor='black')
 
         patches = [Ellipse(xy=(0, 0), width=0, height=0, angle=0, edgecolor='black', 
                    facecolor='none', lw='4') for comp in range(2*num_comps)]
@@ -576,7 +576,10 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
 
         days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
 
-        colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
+        if num_comps == 4:
+            colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
+        else:
+            colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
 
         cluster_data = np.hstack((loads[:, time, None], gps_loc))
 
@@ -612,6 +615,7 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
 
         # Setting the cluster colors to keep the colors the same each iteration.
         scatter.set_color([colors[color_codes[labels[i]]] for i in range(len(labels))]) 
+        scatter.set_edgecolor(['black' for i in range(len(labels))])
 
         num = 0
 
@@ -657,8 +661,13 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
 
         ax.set_xlabel(days[day] + ' ' + str(8+hour) + ':00')
 
-    plt.tight_layout()
+    fig.tight_layout()
     fig.suptitle(title, fontsize=fs)
+
+    if shape[0] > 1 and shape[1] == 1:
+        plt.subplots_adjust(top=0.975)
+    else:
+        plt.subplots_adjust(top=0.98)
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
     
