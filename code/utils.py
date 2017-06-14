@@ -100,3 +100,30 @@ def load_data(data_path):
     P = len(idx_to_day_hour)
 
     return gps_loc, avg_loads, park_data, N, P, idx_to_day_hour, day_hour_to_idx
+
+
+def load_daily_data(data_path):
+    """Load the data into a multi-index DataFrame sorted by date and block key.
+    
+    :param data_path: File path to the directory with the data.
+    
+    :return park_data: Multi-index DataFrame with data sorted by date and block key.
+    :return gps_loc: Numpy array with each row containing the lat and long of the block.
+    :return N: The number of block faces in the data.
+    """
+
+    params = load_data(data_path)
+    gps_loc, avg_loads, park_data, N, P, idx_to_day_hour, day_hour_to_idx = params
+
+    for key in park_data:
+        park_data[key] = park_data[key].set_index('Datetime')
+
+    # Merging the dataframes into multi-index dataframe.
+    park_data = pd.concat(park_data.values(), keys=park_data.keys())
+
+    park_data.index.names = ['ID', 'Datetime']
+
+    # Making the first index the date, and the second the element key, sorted by date.
+    park_data = park_data.swaplevel(0, 1).sort_index()
+
+    return park_data, gps_loc, N

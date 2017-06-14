@@ -583,9 +583,6 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
 
         cluster_data = np.hstack((loads[:, time, None], gps_loc))
 
-        # Saving the cluster data prior to any scaling for plotting.
-        cluster_data_true = cluster_data
-
         scaler = MinMaxScaler().fit(cluster_data)
         cluster_data = scaler.transform(cluster_data)
 
