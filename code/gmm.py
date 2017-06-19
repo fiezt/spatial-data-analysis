@@ -7,8 +7,20 @@ import functools
 
 
 def locational_demand_analysis(park_data, gps_loc, N):
-    """
+    """Find GMM prediction error at each day of the week and time of day.
+    
+    :param park_data: Multi-index DataFrame containing dates and blockface key
+    indexes and the corresponding loads, hour, and day.
 
+    :param gps_loc: Numpy array with each row containing the GPS coordinates of 
+    each blockface ordered the same as in park_data.
+
+    :param N: Integer count of the number of blockfaces.
+
+    :return results: List of tuples with each tuple containing the day of week 
+    as an integer, integer hour of the day, prediction accuracy, and list of 
+    numpy arrays of the GPS coordinates of the centroids of the cluster for each
+    fit.
     """
 
     days = sorted(park_data['Day'].unique())
@@ -28,8 +40,19 @@ def locational_demand_analysis(park_data, gps_loc, N):
 
 
 def GMM(park_data, gps_loc, times, N, iter):
-    """
+    """Finding the GMM prediction error for a day and hour combination.
+    
+    :param park_data: Multi-index DataFrame containing dates and blockface key
+    indexes and the corresponding loads, hour, and day.
+    :param gps_loc: Numpy array with each row containing the GPS coordinates of 
+    each blockface ordered the same as in park_data.
+    :param times: List of tuples, with each tuple containing day and hour pair.
+    :param N: Integer count of the number of blockfaces.
+    :param iter: Integer iteration number of the multiprocessing.
 
+    :return result: Tuple containing the integer day of week, integer hour of
+    the day, float time_avg_accuracy of the accuracy percentage, and list of 
+    numpy arrays of the centroids of each fit.
     """
 
     time = times[iter]
@@ -47,6 +70,7 @@ def GMM(park_data, gps_loc, times, N, iter):
 
     centers = []
 
+    # Fitting the model for each date for the given day and hour combination.
     for train_time in xrange(P):
 
         train = np.hstack((data[:, train_time, None], gps_loc))
@@ -58,7 +82,7 @@ def GMM(park_data, gps_loc, times, N, iter):
         gmm = mixture.GaussianMixture(n_init=200, n_components=4, 
                                       covariance_type='diag').fit(train)
 
-        # Scaling the mean and covariances back to gps coordinates.
+        # Scaling the mean and covariances back to GPS coordinates.
         means = np.vstack(([(mean[1:] - scaler.min_[1:])/(scaler.scale_[1:]) for mean in gmm.means_]))
         covs = np.dstack(([np.diag((cov[1:])/(scaler.scale_[1:]**2)) for cov in gmm.covariances_])).T
 
@@ -68,7 +92,7 @@ def GMM(park_data, gps_loc, times, N, iter):
 
         accuracies = []
 
-        # For each other day of data, predict using model determine accuracy of model.
+        # For each other day of data, predict using model that was fit.
         for test_time in xrange(P):
 
             if test_time == train_time:
@@ -85,9 +109,12 @@ def GMM(park_data, gps_loc, times, N, iter):
 
             accuracies.append(accuracy)
 
+        # Getting average prediction accuracy over all test sets.
         average_accuracies.append(np.array(accuracies).mean())
 
     # Average accuracy for the particular day and hour combination.
-    time_avg_accuracy = np.array(average_accuracies).mean()
+    time_avg_accuracy = round(np.array(average_accuracies).mean() * 100, 2)
+
+    result = (day, hour, time_avg_accuracy, centers)
     
-    return (day, hour, time_avg_accuracy, centers)
+    return result
