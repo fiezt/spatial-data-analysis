@@ -29,8 +29,13 @@ def get_mixture_weights(train_labels, N):
 
 
 def get_adjacent_weights(block_keys, N, path):
-    """
+    """Get the weight matrix for Moran I by using adjacent connections.
+    
+    :param block_keys: List of block key identifiers.
+    :param N: Integer number of spatial units.
+    :param path: File path to the data about neighboring blocks.
 
+    :return weights: Numpy array weight matrix.
     """
 
     weights = np.zeros((N, N))
@@ -40,6 +45,7 @@ def get_adjacent_weights(block_keys, N, path):
     for key in block_keys:
         neighbors = getNeighbors(key, path)
         
+        # Weights are set to one if the blocks are connected.
         for neighbor in neighbors:
             weights[i, block_keys.index(neighbor)] = 1
         
@@ -50,8 +56,10 @@ def get_adjacent_weights(block_keys, N, path):
 
 def getNeighbors(ElementKey, path):
     """Return the element keys that are neighboring to the current block.
+
     :param ElementKey: The element key to find the neighbors of.
     :param path: The path to the location of the adjacency information.
+
     :return: List of neighboring element keys.
     """
 
@@ -114,8 +122,15 @@ def getNeighbors(ElementKey, path):
 
 
 def moran_adjacent(x, block_keys, N, path, weight_func=get_adjacent_weights):
-    """
+    """Find the Moran I using the adjacent weight matrix.
 
+    :param x: Numpy array of the variable of interest.
+    :param block_keys: List of block key identifiers.
+    :param N: Integer number of samples.
+    :param path: The path to the location of the adjacency information.
+    :param weight_func: Function to get the weights for Moran's I.
+
+    :return I: Moran I.
     """
 
     weights = weight_func(block_keys, N, path)
@@ -220,7 +235,7 @@ def z_score(I, expectation, variance):
 def p_value(z):
     """Calculating the one and two sided p-value for the Moran z-score.
     
-    :param z:
+    :param z: Float z score of the Moran I.
 
     :return p_one_sided, p_two_sided: one sided and two sided p values.
     """
