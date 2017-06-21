@@ -5,6 +5,7 @@ import matplotlib
 from matplotlib import cm
 from matplotlib.colors import LightSource
 import os
+from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
 from sklearn import mixture
 from matplotlib.patches import Ellipse
@@ -492,7 +493,7 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
                  num_comps=4, shape=None, filename='mixture_plot.png', 
                  title='Gaussian Mixture Model on Average Load Distribution and Location'):
     
-    """Initializing figure for animation.
+    """Plotting the mixture model results at a time or times of day.
     
     :param loads: 2d numpy array with each row containing the load for a day of 
     week and time, where each column is a day of week and hour.
@@ -639,7 +640,7 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
                 width = abs(new_center[0] - pix_center[0])
                 height = abs(new_center[1] - pix_center[1])
 
-                # Updating the ellipses for the animation.
+                # Updating the ellipses.
                 patches[num].center = xy
                 patches[num].width = width
                 patches[num].height = height
@@ -669,6 +670,119 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
     
     return fig, ax, means
+
+ 
+def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4, 
+                   shape=None, filename='centroid_plot.png', 
+                   title='Centroids'):
+    
+    """Plotting the centroids from different dates at the same weekday and hour.
+    
+    :param means: List of list of numpy arrays, with each outer list containing
+    and inner list which contains a list of numpy arrays where each numpy array
+    in the inner lists contains 2-d arrays that contain each of the centroids
+    for a GMM fit of a particular date for the weekday and hour.
+    :param gps_loc: Numpy array, each row containing the lat and long of a block.
+    :param N: Integer number of samples (blocks) in the data.
+    :param times: List of indexes to get the load data from.
+    :param fig_path: Path to read background figure from.
+    :param num_comps: Integer number of mixture components for the model.
+    :param shape: Tuple of the row and col dimension of subplots.
+    :param filename: Name to save the file as.
+    :param title: Title for the figure.
+
+    :return fig, ax: Figure object containing the GMM model on the map, and the
+    corresponding ax object.
+    """
+
+    upleft, bttmright, imgsize = setup_image()
+
+    mp = MapOverlay(upleft, bttmright, imgsize)
+
+    # Converting the gps locations to pixel positions.
+    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
+
+    # Setting center of image.
+    center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
+    pix_center = mp.to_image_pixel_position(list(center))
+    
+    if isinstance(times, list):
+        num_figs = len(times)
+    else:
+        num_figs = 1
+    
+    if shape == None:
+        fig = plt.figure(figsize=(18*num_figs, 16))
+        fs = 35
+        fs_x = 35
+    else:
+        fig = plt.figure(figsize=(18*shape[1], 16*shape[0]))
+        fs = 35
+        fs_x = 35
+    
+    for fig_count in range(1, num_figs+1):
+        
+        if shape == None:
+            ax = fig.add_subplot(1, num_figs, fig_count)
+        else:
+            ax = fig.add_subplot(shape[0], shape[1], fig_count)
+            
+        ax.set_xlim((min(pixpos[:,0])-100, max(pixpos[:,0])+100))
+        ax.set_ylim((min(pixpos[:,1])-100, max(pixpos[:,1])+100))
+        
+        if isinstance(times, list):
+            time = times[fig_count-1]
+        else:
+            time = times
+        
+        ax.invert_yaxis()
+
+        ax.axes.get_xaxis().set_ticks([])
+        ax.axes.get_yaxis().set_ticks([])
+
+        im = imread(os.path.join(fig_path, "belltown.png"))
+        ax.imshow(im)
+
+        # Clustering the centroids.
+        data = np.vstack((means[time]))
+        kmeans = KMeans(n_clusters=num_comps, n_init=50).fit(data)
+        labels = kmeans.labels_.tolist()
+
+        # Converting the centroid locations to pixel positions.
+        data_pixpos = np.array([mp.to_image_pixel_position(list(data[i,:])) for i in range(len(data))])
+
+        # Adding in the centroids to the map as points.
+        scatter = ax.scatter(data_pixpos[:, 0], data_pixpos[:, 1], s=500, color='red', edgecolor='black')
+
+        ax.xaxis.label.set_fontsize(fs_x)
+
+        days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
+
+        if num_comps == 4:
+            colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
+        else:
+            colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
+
+        # Setting the centroid colors to be the same within a cluster.
+        scatter.set_color([colors[labels[i]] for i in range(len(labels))]) 
+        scatter.set_edgecolor(['black' for i in range(len(labels))])
+
+        hour = time % 10
+        day = time/10
+
+        ax.set_xlabel(days[day] + ' ' + str(8+hour) + ':00')
+
+    fig.tight_layout()
+    fig.suptitle(title, fontsize=fs)
+
+    if shape[0] > 1 and shape[1] == 1:
+        plt.subplots_adjust(top=0.975)
+    else:
+        plt.subplots_adjust(top=0.98)
+
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    
+    return fig, ax
 
 
 def plot_all(loads, gps_loc, time, N, P, fig_path):

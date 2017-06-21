@@ -51,7 +51,8 @@ def GMM(park_data, gps_loc, times, N, iter):
     :param iter: Integer iteration number of the multiprocessing.
 
     :return result: Tuple containing the integer day of week, integer hour of
-    the day, float time_avg_accuracy of the accuracy percentage, and list of 
+    the day, float time_avg_accuracy of the accuracy percentage, float 
+    time_avg_moran of the average Moran I autocorrelation, and list of 
     numpy arrays of the centroids of each fit.
     """
 
@@ -70,12 +71,15 @@ def GMM(park_data, gps_loc, times, N, iter):
 
     centers = []
 
+    morans = []
+
     # Fitting the model for each date for the given day and hour combination.
     for train_time in xrange(P):
 
         train = np.hstack((data[:, train_time, None], gps_loc))
 
         # Saving the scaling so it can be applied to the test set as well.
+        unscaled_loads = train[:,0]
         scaler = MinMaxScaler().fit(train)
         train = scaler.transform(train)
 
@@ -89,6 +93,8 @@ def GMM(park_data, gps_loc, times, N, iter):
         centers.append(means)
 
         train_labels = gmm.predict(train)
+
+        morans.append(moran_autocorrelation(unscaled_loads, train_labels, N))
 
         accuracies = []
 
@@ -112,9 +118,50 @@ def GMM(park_data, gps_loc, times, N, iter):
         # Getting average prediction accuracy over all test sets.
         average_accuracies.append(np.array(accuracies).mean())
 
-    # Average accuracy for the particular day and hour combination.
-    time_avg_accuracy = round(np.array(average_accuracies).mean() * 100, 2)
+    # Average error for the particular day and hour combination.
+    time_avg_accuracy = round(100.0 - np.array(average_accuracies).mean() * 100, 2)
 
-    result = (day, hour, time_avg_accuracy, centers)
+    # Average Moran autocorrelation for the particular day and hour combo.
+    time_avg_moran = np.array(morans).mean()
+
+    result = (day, hour, time_avg_accuracy, time_avg_moran, centers)
     
     return result
+
+
+def moran_autocorrelation(x, train_labels, N):
+    """Calculating the Moran I autocorrelation.
+
+    The weight matrix is used by giving weight 1 at the column index if the
+    column has the same label as the row index does. All other weights are 
+    set to 0, and the diagonal is set to 0. The variable of interest is then x.
+
+    :param x: Numpy array of the variable of interest.
+    :param train_labels: Numpy array like containing class label for each data 
+    point in x.
+    :param N: Integer number of samples.
+
+    :return I: float of Moran I autocorrelation.
+    """
+
+    weights = np.zeros((N, N))
+
+    for i in xrange(N):
+        label = train_labels[i]
+        matching = np.where(train_labels == label)[0].tolist()
+        weights[i, matching] = 1
+
+    di = np.diag_indices(N)
+
+    weights[di] = 0
+
+    W = weights.sum()
+    z = x - x.mean()
+
+    top = sum(weights[i,j]*z[i]*z[j] for i in xrange(N) for j in xrange(N)) 
+    bottom = np.dot(z.T, z)
+
+    I = (N/W) * top/bottom
+
+    return I
+
