@@ -28,7 +28,7 @@ def get_mixture_weights(train_labels, N):
     return weights
 
 
-def get_adjacent_weights(block_keys, N, path):
+def get_adjacent_weights(block_keys, N, path=os.getcwd() + '/../data'):
     """Get the weight matrix for Moran I by using adjacent connections.
     
     :param block_keys: List of block key identifiers.
@@ -38,94 +38,16 @@ def get_adjacent_weights(block_keys, N, path):
     :return weights: Numpy array weight matrix.
     """
 
-    weights = np.zeros((N, N))
-
-    i = 0
-
-    for key in block_keys:
-        neighbors = getNeighbors(key, path)
-        
-        # Weights are set to one if the blocks are connected.
-        for neighbor in neighbors:
-            weights[i, block_keys.index(neighbor)] = 1
-        
-        i += 1
+    weights = np.genfromtxt(os.path.join(path, "belltown-adjacency1.txt"), delimiter=" ")
 
     return weights
 
 
-def getNeighbors(ElementKey, path):
-    """Return the element keys that are neighboring to the current block.
-
-    :param ElementKey: The element key to find the neighbors of.
-    :param path: The path to the location of the adjacency information.
-
-    :return: List of neighboring element keys.
-    """
-
-    matIndToBlockIDs = pickle.load(open(os.path.join(path, "matrixIndtoBlockIndecies.pck"), 'r'))
-
-    # List of ElementKeys, indexes are the keys integer identifier.
-    blockIDtoElementKey = pickle.load(open(os.path.join(path, "blockIndextoElementKey.pck"), 'r'))
-
-    # Maps integer identifier of ElementKey to matrix row/column index.
-    blockIDtoMatInd = pickle.load(open(os.path.join(path, "blockIndextomatrixInd.pck"), 'r'))
-
-    # Adjacency matrix of the block network.
-    adjacency = np.loadtxt(os.path.join(path, "belltown-adjacency.csv"), delimiter=",")
-
-    # Element key to lat long data.
-    ElementKeytoLatLong = pickle.load(open(os.path.join(path, "ElementKeytoLatLong.pck"), 'r'))
-
-    # Get individual index of ElementKey.
-    blockID = blockIDtoElementKey.index(ElementKey)
-
-    # Get compressed index of individual index.
-    compblockID = blockIDtoMatInd[blockID]
-    blocks = matIndToBlockIDs[compblockID]
-    ekeys = []
-    inds = []
-    lats = []
-    longs = []
-
-    # Pair of latitude/longitude tuples, one for each blockface endpoint.
-    for block in blocks:
-        eKey = blockIDtoElementKey[block]
-        ekeys.append(str(eKey))
-        LatLongs = ElementKeytoLatLong[eKey]
-        i = blockIDtoMatInd[blockID]
-        inds.append(i)
-
-        for coord in LatLongs:
-            lats.append(coord[0])
-            longs.append(coord[1])
-
-    # Find all incident blocks in adjacency matrix.
-    neighborElementKeys = set()
-    for i in inds:
-        neighbors = list(adjacency[i, :])
-
-        # Find all ElementKeys that map to column indices of neighbors of i=20.
-        neighborIDs = [matIndToBlockIDs[j] for j in range(len(neighbors)) if
-                       neighbors[j] == 1]
-
-        # Map all of your unique integer ID's to ElementKeys.
-        for neighborIDList in neighborIDs:
-            for ID in neighborIDList:
-                neighborElementKeys.add(blockIDtoElementKey[ID])
-                latlongs = ElementKeytoLatLong[blockIDtoElementKey[ID]]
-                for coord in latlongs:
-                    lats.append(coord[0])
-                    longs.append(coord[1])
-
-    return list(neighborElementKeys)
-
-
-def moran_adjacent(x, block_keys, N, path, weight_func=get_adjacent_weights):
+def moran_adjacent(x, block_keys, N, path=os.getcwd() + '/../data', weight_func=get_adjacent_weights):
     """Find the Moran I using the adjacent weight matrix.
 
     :param x: Numpy array of the variable of interest.
-    :param block_keys: List of block key identifiers.
+    :param block_keys: List of ordered block key identifiers.
     :param N: Integer number of samples.
     :param path: The path to the location of the adjacency information.
     :param weight_func: Function to get the weights for Moran's I.
@@ -170,7 +92,10 @@ def moran_mixture(x, train_labels, N, weight_func=get_mixture_weights):
     top = sum(weights[i,j]*z[i]*z[j] for i in xrange(N) for j in xrange(N)) 
     bottom = np.dot(z.T, z)
 
-    I = (N/W) * top/bottom
+    try:
+        I = (N/W) * top/bottom
+    except:
+        I = None
 
     return I
 

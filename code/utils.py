@@ -43,6 +43,9 @@ def load_data(data_path):
         
         # Loading the data for a single block.
         block_data = pd.DataFrame(load_data[key].items(), columns=['Datetime', 'Load'])
+
+        # Clipping the loads to be no higher than 2.5
+        block_data['Load'] = block_data['Load'].clip(upper=2.5)
         
         block_data['Datetime'] = pd.to_datetime(block_data['Datetime'])
         
@@ -58,15 +61,9 @@ def load_data(data_path):
         
         # Getting the dates where the total parking is 0 because of holidays.
         empty_day_dates = []
-        
-        # No parking on new years eve.
-        empty_day_dates.append(datetime.date(2015,1,1))
-        
-        # No parking on MLK day.
-        empty_day_dates.append(datetime.date(2015,1,19))
-        
-        # No parking on Presidents day.
-        empty_day_dates.append(datetime.date(2015,2,16))
+
+        # No parking on Independence day.
+        empty_day_dates.append(datetime.date(2016,7,4))
         
         # Dropping the days where the total parking is 0.
         block_data = block_data.loc[~block_data['Date'].isin(empty_day_dates)]
@@ -102,7 +99,30 @@ def load_data(data_path):
     return gps_loc, avg_loads, park_data, N, P, idx_to_day_hour, day_hour_to_idx
 
 
-def load_daily_data(data_path):
+def load_daily_data(park_data):
+    """Load the data into a multi-index DataFrame sorted by date and block key.
+    
+    :param park_data: Dictionary of DataFrames, where each DataFrame contains
+    the full load data for a block.
+    
+    :return park_data: Multi-index DataFrame with data sorted by date and block key.
+    """
+
+    for key in park_data:
+        park_data[key] = park_data[key].set_index('Datetime')
+
+    # Merging the dataframes into multi-index dataframe.
+    park_data = pd.concat(park_data.values(), keys=park_data.keys())
+
+    park_data.index.names = ['ID', 'Datetime']
+
+    # Making the first index the date, and the second the element key, sorted by date.
+    park_data = park_data.swaplevel(0, 1).sort_index()
+
+    return park_data
+
+
+def load_daily_data_standalone(data_path):
     """Load the data into a multi-index DataFrame sorted by date and block key.
     
     :param data_path: File path to the directory with the data.

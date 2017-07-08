@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn import mixture
-from moran_auto import moran_mixture
+import moran_auto
 import itertools
 import multiprocessing
 import functools
@@ -62,9 +62,10 @@ def GMM(park_data, gps_loc, times, N, iter):
     hour = time[1]
 
     data_df = park_data.loc[(park_data['Day'] == day) & (park_data['Hour'] == hour)]
+    block_keys = sorted(data_df.index.get_level_values(1).unique().tolist())
 
     # Each row is an element key, and each column is a date.
-    data = data_df['Load'].values.reshape((-1, N)).T
+    data = data_df['Load'].values.reshape((N, -1))
 
     P = data.shape[1]
 
@@ -72,7 +73,8 @@ def GMM(park_data, gps_loc, times, N, iter):
 
     centers = []
 
-    morans = []
+    morans_mixture = []
+    morans_adjacent = []
 
     # Fitting the model for each date for the given day and hour combination.
     for train_time in xrange(P):
@@ -95,7 +97,23 @@ def GMM(park_data, gps_loc, times, N, iter):
 
         train_labels = gmm.predict(train)
 
-        morans.append(moran_mixture(unscaled_loads, train_labels, N))
+        weights = moran_auto.get_mixture_weights(train_labels, N)        
+        I = moran_auto.moran_mixture(unscaled_loads, train_labels, N)
+        expectation = moran_auto.moran_expectation(N)
+        variance = moran_auto.moran_variance(unscaled_loads, weights, N)
+        z_score = moran_auto.z_score(I, expectation, variance)
+        p_one_sided, p_two_sided = moran_auto.p_value(z_score)
+
+        morans_mixture.append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
+
+        weights = moran_auto.get_adjacent_weights(block_keys, N)        
+        I = moran_auto.moran_adjacent(unscaled_loads, block_keys, N)
+        expectation = moran_auto.moran_expectation(N)
+        variance = moran_auto.moran_variance(unscaled_loads, weights, N)
+        z_score = moran_auto.z_score(I, expectation, variance)
+        p_one_sided, p_two_sided = moran_auto.p_value(z_score)
+
+        morans_adjacent.append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
 
         accuracies = []
 
@@ -122,13 +140,6 @@ def GMM(park_data, gps_loc, times, N, iter):
     # Average error for the particular day and hour combination.
     time_avg_accuracy = round(100.0 - np.array(average_accuracies).mean() * 100, 2)
 
-    # Average Moran autocorrelation for the particular day and hour combo.
-    time_avg_moran = np.array(morans).mean()
-
-    result = (day, hour, time_avg_accuracy, time_avg_moran, centers)
+    result = (day, hour, time_avg_accuracy, morans_mixture, morans_adjacent, centers)
     
     return result
-
-
-
-

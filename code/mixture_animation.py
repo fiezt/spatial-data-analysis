@@ -186,8 +186,8 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
     # Updating the centroids for the animations.
     scatter_centroid.set_offsets(means)
     
-    hour = time % 10
-    day = time/10
+    hour = time % 12
+    day = time/12
     
     ax.set_xlabel(days[day] + ' ' + str(8+hour) + ':00')
     

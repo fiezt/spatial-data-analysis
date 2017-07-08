@@ -2,8 +2,11 @@ import numpy as np
 import matplotlib.mlab as ml
 import matplotlib.pyplot as plt
 import matplotlib
+import mixture_animation
 from matplotlib import cm
+from matplotlib import animation 
 from matplotlib.colors import LightSource
+from mpl_toolkits.mplot3d import Axes3D
 import os
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
@@ -134,13 +137,13 @@ def interpolation(loads, gps_loc, time, N, fig_path, filename='interpolation.png
     ax.invert_yaxis()
 
     # Interpolating between the block locations to create continuous heat map.
-    plt.pcolormesh(xi, yi, Z)
-    plt.scatter(x, y, c=z, s=200)
+    plt.pcolormesh(xi, yi, Z, vmin=z.min(), vmax=z.max(), cmap='jet')
+    plt.scatter(x, y, c=z, s=200, edgecolor='black', vmin=z.min(), vmax=z.max(), cmap='jet')
 
     # Resizing the color bar to be size of image and adding it to the figure.
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.15)
-    cbar = plt.colorbar(cax=cax)
+    cbar = plt.colorbar(cax=cax, cmap='jet')
     cbar.ax.tick_params(labelsize=24) 
 
     ax.axis('off')
@@ -188,8 +191,8 @@ def triangular_grid(loads, gps_loc, time, N, fig_path, filename='triangle.png'):
     ax.invert_yaxis()
 
     # Creating unstructured triangle graph.
-    ax.tripcolor(x[:, 0], y[:, 0], z[:, 0]) 
-    plt.scatter(x,y,c=z,s=200)
+    ax.tripcolor(x[:, 0], y[:, 0], z[:, 0], edgecolor='black', vmin=z.min(), vmax=z.max(), cmap='jet') 
+    plt.scatter(x, y, c=z, s=200, edgecolor='black', vmin=z.min(), vmax=z.max(), cmap='jet')
 
     # Resizing the color bar to be size of image and adding it to the figure.
     divider = make_axes_locatable(ax)
@@ -246,8 +249,8 @@ def contour_plot(loads, gps_loc, time, N, fig_path, title,
     ax.invert_yaxis()
 
     # Creating contour map with the last argument the level of contours.
-    ax.tricontourf(x[:, 0], y[:, 0], z[:, 0], contours) 
-    plt.scatter(x,y,c=z,s=200)
+    ax.tricontourf(x[:, 0], y[:, 0], z[:, 0], contours, vmin=z.min(), vmax=z.max(), cmap='jet') 
+    plt.scatter(x, y, c=z, s=200, edgecolor='black', vmin=z.min(), vmax=z.max(), cmap='jet')
 
     # Resizing the color bar to be size of image and adding it to the figure.
     divider = make_axes_locatable(ax)
@@ -413,7 +416,8 @@ def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogene
     plt.setp(ax.get_yticklabels(), fontsize=22)
     ax.yaxis.set_ticks_position('left')
 
-    plt.bar(bins, counts, 1, color='red', align='center')
+    plt.bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
+    plt.xlim([0, N])
 
     plt.title('Spatial Heterogeneity', fontsize=22)
     plt.xlabel('Blockface Key', fontsize=22)
@@ -458,25 +462,27 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
     plt.setp(ax.get_yticklabels(), fontsize=22)
     ax.yaxis.set_ticks_position('left')
 
-    plt.bar(bins, counts, color='red')
+    plt.bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
+    plt.xlim([-.3, P+.2])
 
-    ax.axvline(x=0.2, color='black')
-    ax.axvline(x=10, color='black')
-    ax.axvline(x=20, color='black')
-    ax.axvline(x=30, color='black')
-    ax.axvline(x=40, color='black')
-    ax.axvline(x=50, color='black')
-    ax.axvline(x=59.7, color='black')
+
+    ax.axvline(x=0, color='black')
+    ax.axvline(x=12, color='black')
+    ax.axvline(x=24, color='black')
+    ax.axvline(x=36, color='black')
+    ax.axvline(x=48, color='black')
+    ax.axvline(x=60, color='black')
+    ax.axvline(x=72, color='black')
 
     plt.title('Temporal Heterogeneity', fontsize=22)
     plt.ylabel('Load', fontsize=22)
 
-    ax.annotate('Monday',xy=(2,-.05),xytext=(2,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Tuesday',xy=(12,-.05),xytext=(12,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Wednesday',xy=(20.65,-.05),xytext=(20.65,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Thursday',xy=(31.90,-.05),xytext=(31.90,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Friday',xy=(43.1,-.05),xytext=(43.1,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Saturday',xy=(51.9,-.05),xytext=(51.9,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Monday', xy=(2,-.05), xytext=(2,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Tuesday', xy=(14,-.05), xytext=(14,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Wednesday', xy=(24.5,-.05), xytext=(24.5,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Thursday', xy=(38,-.05), xytext=(38,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Friday', xy=(51,-.05), xytext=(51,-.05), annotation_clip=False, fontsize=16)
+    ax.annotate('Saturday', xy=(62,-.05), xytext=(62,-.05), annotation_clip=False, fontsize=16)
 
     plt.tight_layout()
 
@@ -484,6 +490,96 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
     
+    return fig, ax
+
+
+def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots'):
+    """
+
+    """
+
+    sns.set()
+    sns.set_style("whitegrid")
+
+    fig, ax = plt.subplots(nrows=1, ncols=6, figsize=(60,10))
+
+    day_dict = {1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 
+                5: 'Friday', 6: 'Saturday'}
+    days = [[i for i in range(j, j+12)] for j in range(0,P,12)]
+
+    i = 1
+
+    for day in days:
+        bins = range(8, P/6 + 8)
+        counts = loads.mean(axis=0)[day]
+
+        ax1 = plt.subplot(1,6,i)
+        
+        ax1.set_xticks(np.arange(min(bins), max(bins)+1, 1))
+        x_labels = [str(b) + 'AM' if b < 12 else str(b-12) + 'PM' 
+                    if b != 12 else str(b) + 'PM' for b in bins]
+        ax1.set_xticklabels(x_labels)
+        
+        plt.title(day_dict[i], fontsize=22)
+        
+        plt.setp(ax1.get_xticklabels(), fontsize=22, rotation=60)
+        plt.setp(ax1.get_yticklabels(), fontsize=22)
+        
+        for tick in ax1.xaxis.get_majorticklabels():
+            tick.set_horizontalalignment('left')
+        
+        plt.bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
+        plt.xlim([min(bins), max(bins)+1])
+        
+        i += 1
+
+    sns.reset_orig()
+
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+
+    return fig, ax
+
+
+def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots'):
+    """
+
+    """
+
+    sns.set()
+    sns.set_style("whitegrid")
+
+    fig, ax = plt.subplots(nrows=2,ncols=5,figsize=(35,21))
+
+    hours = [[j + i*12 for i in range(6)] for j in range(12)]
+
+    i = 1
+    for hour in hours:
+        bins = range(6)
+        counts = loads.mean(axis=0)[hour]
+        
+        ax1 = plt.subplot(2,6,i)
+        ax1.set_xticks(np.arange(min(bins), max(bins)+1, 1))
+        ax1.set_xticklabels(['Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'])
+        plt.setp(ax1.get_xticklabels(), fontsize=22, rotation=60)
+        plt.setp(ax1.get_yticklabels(), fontsize=22)
+        
+        if i + 7 < 12:
+            title = str(7+i) + ':00 AM'    
+        elif i + 7 == 12:
+            title = str(7+i) + ':00 PM'
+        elif i + 7 > 12:
+            title = str(7+i-12) + ':00 PM'
+            
+        plt.title(title, fontsize=22)
+        
+        plt.bar(bins, counts, color='red', align='center')
+        
+        i += 1
+        
+    sns.reset_orig()
+
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+
     return fig, ax
 
 
@@ -654,10 +750,15 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
         # Updating the centroids for the animations.
         scatter_centroid.set_offsets(pix_means)
 
-        hour = time % 10
-        day = time/10
+        hour = 8 + (time % 12)
+        if hour < 12:
+            hour = str(hour) + ':00 AM'
+        else:
+            hour = str(hour - 12) + ':00 PM'
 
-        ax.set_xlabel(days[day] + ' ' + str(8+hour) + ':00')
+        day = time/12
+
+        ax.set_xlabel(days[day] + ' ' + hour)
 
     fig.tight_layout()
     fig.suptitle(title, fontsize=fs)
@@ -669,7 +770,7 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
     
-    return fig, ax, means
+    return fig, ax
 
  
 def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4, 
@@ -767,8 +868,8 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
         scatter.set_color([colors[labels[i]] for i in range(len(labels))]) 
         scatter.set_edgecolor(['black' for i in range(len(labels))])
 
-        hour = time % 10
-        day = time/10
+        hour = time % 12
+        day = time/12
 
         ax.set_xlabel(days[day] + ' ' + str(8+hour) + ':00')
 
@@ -785,48 +886,104 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
     return fig, ax
 
 
-def plot_all(loads, gps_loc, time, N, P, fig_path):
-    """Produce all plots including surface plot, interpolation, triangular 
-    grid, contour plot, voronoi, spatial_heterogeneity, temporal_heterogeneity.
-
-    :param loads: Numpy array with each row containing the load for a day of 
-    week and time, where each column is a day of week and hour.
-    :param gps_loc: Numpy array with each row containing the lat, long pair 
-    midpoints for a block.
-    :param time: Column index to get the load data from.
-    :param N: Number of samples (locations).
-    :param P: Number of times.
-    :param fig_path: Path to save file plot to.
-
-    :return: Nothing is returned but the plots are plotted and saved.
+def model_selection(loads, gps_loc, P, fig_path):
     """
 
-    fig, ax = surface_plot(loads=loads, gps_loc=gps_loc, time=4, 
-                           fig_path=fig_path)
-    plt.show()
+    """
 
-    fig, ax = interpolation(loads=loads, gps_loc=gps_loc, time=time,
-                            N=N, fig_path=fig_path)
-    plt.show()
+    model_selection = {"likelihood": [], "bic": [], "aic": []} 
+    min_comps = 1
+    max_comps = 20
 
-    fig, ax = triangular_grid(loads=loads, gps_loc=gps_loc, time=time,
-                              N=N, fig_path=fig_path)
-    plt.show()
+    for time in range(P):    
+        likelihoods = []
+        bics = []
+        aics = []
 
-    fig, ax = contour_plot(loads=loads, gps_loc=gps_loc, time=time,
-                           N=N, fig_path=fig_path)
-    plt.show()
+        for num_comps in range(min_comps, max_comps):
+            cluster_data = np.hstack((loads[:, time, None], gps_loc))
 
-    fig, ax = voronoi(gps_loc=gps_loc, N=N, fig_path=fig_path)
-    plt.show()
+            scaler = MinMaxScaler().fit(cluster_data)
+            cluster_data = scaler.transform(cluster_data)
 
-    fig, ax = spatial_heterogeneity(loads=loads, time=time, 
-                                    N=N, fig_path=fig_path)
-    plt.show()
+            gmm = mixture.GaussianMixture(n_init=10, n_components=num_comps, 
+                                          covariance_type='diag').fit(cluster_data)
 
-    fig, ax = temporal_heterogeneity(loads=loads, time=time, 
-                                     P=P, fig_path=fig_path)
-    plt.show()
+            likelihoods.append(gmm.lower_bound_)
+            bics.append(gmm.bic(cluster_data))
+            aics.append(gmm.aic(cluster_data))
 
-    fig, ax, means = mixture_plot(loads, gps_loc, times=time, N=N, fig_path=fig_path)
-    plt.show()
+        model_selection['likelihood'].append(likelihoods)
+        model_selection['bic'].append(bics)
+        model_selection['aic'].append(aics)  
+
+    sns.set()
+    sns.set_style("whitegrid")
+    
+    # Likelihood model selection plot.
+    plt.figure()
+    mean_likelihood = np.mean(np.vstack((model_selection['likelihood'])), axis=0)
+    plt.plot(range(min_comps, max_comps), mean_likelihood, 'o-', color='red')
+    plt.axvline(x=5, color='black')
+    plt.axvline(x=10, color='black')
+    plt.axvline(x=15, color='black')
+    plt.axvline(x=20, color='black')
+    plt.axvline(x=25, color='black')
+    plt.xlabel('Number of Components')
+    plt.ylabel('Likelihood')
+    plt.title('Likelihood Model Selection')
+    plt.savefig(os.path.join(fig_path, 'likelihood_model.png'))
+
+    # BIC model selection plot.
+    plt.figure()
+    mean_bic = np.mean(np.vstack((model_selection['bic'])), axis=0)
+    plt.plot(range(min_comps, max_comps), mean_bic, 'o-', color='red')
+    plt.axvline(x=5, color='black')
+    plt.axvline(x=10, color='black')
+    plt.axvline(x=15, color='black')
+    plt.axvline(x=20, color='black')
+    plt.axvline(x=25, color='black')
+    plt.xlabel('Number of Components')
+    plt.ylabel('BIC')
+    plt.title('BIC Model Selection')
+    plt.savefig(os.path.join(fig_path, 'bic_model.png'))
+
+    # AIC model selection plot.
+    plt.figure()
+    mean_aic = np.mean(np.vstack((model_selection['aic'])), axis=0)
+    plt.plot(range(min_comps, max_comps), mean_aic, 'o-', color='red')
+    plt.axvline(x=5, color='black')
+    plt.axvline(x=10, color='black')
+    plt.axvline(x=15, color='black')
+    plt.axvline(x=20, color='black')
+    plt.axvline(x=25, color='black')
+    plt.xlabel('Number of Components')
+    plt.ylabel('AIC')
+    plt.title('AIC Model Selection')
+    plt.savefig(os.path.join(fig_path, 'aic_model.png'))  
+
+    sns.reset_orig()
+
+
+def create_animation(loads, gps_loc, N, P, fig_path, animation_path, num_comps=4):
+    """
+
+    """
+
+    params = mixture_animation.init_animation(gps_loc, num_comps, N, fig_path)
+    fig, ax, scatter, scatter_centroid, patches, ellipses, mp, center, pix_center = params
+
+    times = range(P)
+
+    default_means = np.array([[47.61348888, -122.34343007],[47.61179196, -122.34500616],
+                              [47.61597088, -122.35054099],[47.61706817, -122.34617185]])
+
+    ani = animation.FuncAnimation(fig=fig, func=mixture_animation.animate, frames=P, 
+                                  fargs=(times, ax, scatter, scatter_centroid, patches, 
+                                         ellipses, mp, default_means, center, 
+                                         pix_center, loads, gps_loc, num_comps, ), 
+                                  interval=200)
+
+
+    FFwriter = animation.FFMpegWriter(fps=1)
+    ani.save(os.path.join(animation_path, 'mixture.mp4'), writer=FFwriter)
