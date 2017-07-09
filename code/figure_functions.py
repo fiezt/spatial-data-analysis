@@ -465,24 +465,42 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
     plt.bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
     plt.xlim([-.3, P+.2])
 
+    if P == 60:
+        ax.axvline(x=0, color='black')
+        ax.axvline(x=10, color='black')
+        ax.axvline(x=20, color='black')
+        ax.axvline(x=30, color='black')
+        ax.axvline(x=40, color='black')
+        ax.axvline(x=50, color='black')
+        ax.axvline(x=60, color='black')
 
-    ax.axvline(x=0, color='black')
-    ax.axvline(x=12, color='black')
-    ax.axvline(x=24, color='black')
-    ax.axvline(x=36, color='black')
-    ax.axvline(x=48, color='black')
-    ax.axvline(x=60, color='black')
-    ax.axvline(x=72, color='black')
+        plt.title('Temporal Heterogeneity', fontsize=22)
+        plt.ylabel('Load', fontsize=22)
 
-    plt.title('Temporal Heterogeneity', fontsize=22)
-    plt.ylabel('Load', fontsize=22)
+        ax.annotate('Monday',xy=(1.7,-.05),xytext=(1.7,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Tuesday',xy=(11.7,-.05),xytext=(11.7,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Wednesday',xy=(20.35,-.05),xytext=(20.35,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Thursday',xy=(31.6,-.05),xytext=(31.6,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Friday',xy=(42.8,-.05),xytext=(42.8,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Saturday',xy=(51.6,-.05),xytext=(51.6,-.05), annotation_clip=False, fontsize=16)
+    elif P == 72:
+        ax.axvline(x=0, color='black')
+        ax.axvline(x=12, color='black')
+        ax.axvline(x=24, color='black')
+        ax.axvline(x=36, color='black')
+        ax.axvline(x=48, color='black')
+        ax.axvline(x=60, color='black')
+        ax.axvline(x=72, color='black')
 
-    ax.annotate('Monday', xy=(2,-.05), xytext=(2,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Tuesday', xy=(14,-.05), xytext=(14,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Wednesday', xy=(24.5,-.05), xytext=(24.5,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Thursday', xy=(38,-.05), xytext=(38,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Friday', xy=(51,-.05), xytext=(51,-.05), annotation_clip=False, fontsize=16)
-    ax.annotate('Saturday', xy=(62,-.05), xytext=(62,-.05), annotation_clip=False, fontsize=16)
+        plt.title('Temporal Heterogeneity', fontsize=22)
+        plt.ylabel('Load', fontsize=22)
+
+        ax.annotate('Monday', xy=(2,-.05), xytext=(2,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Tuesday', xy=(14,-.05), xytext=(14,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Wednesday', xy=(24.5,-.05), xytext=(24.5,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Thursday', xy=(38,-.05), xytext=(38,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Friday', xy=(51,-.05), xytext=(51,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Saturday', xy=(62,-.05), xytext=(62,-.05), annotation_clip=False, fontsize=16)
 
     plt.tight_layout()
 
@@ -505,12 +523,12 @@ def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots'):
 
     day_dict = {1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 
                 5: 'Friday', 6: 'Saturday'}
-    days = [[i for i in range(j, j+12)] for j in range(0,P,12)]
+    days = [[i for i in range(j, j+(P/6))] for j in range(0, P, (P/6))]
 
     i = 1
 
     for day in days:
-        bins = range(8, P/6 + 8)
+        bins = range(8, (P/6) + 8)
         counts = loads.mean(axis=0)[day]
 
         ax1 = plt.subplot(1,6,i)
@@ -548,16 +566,19 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots'):
     sns.set()
     sns.set_style("whitegrid")
 
-    fig, ax = plt.subplots(nrows=2,ncols=5,figsize=(35,21))
+    nrows = 2
+    ncols = (loads.shape[1]/6)/2
+    fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=(6*ncols, 21))
 
-    hours = [[j + i*12 for i in range(6)] for j in range(12)]
+    P = loads.shape[1]
+    hours = [[j + i*(P/6) for i in range(6)] for j in range((P/6))]
 
     i = 1
     for hour in hours:
         bins = range(6)
         counts = loads.mean(axis=0)[hour]
         
-        ax1 = plt.subplot(2,6,i)
+        ax1 = plt.subplot(nrows, ncols, i)
         ax1.set_xticks(np.arange(min(bins), max(bins)+1, 1))
         ax1.set_xticklabels(['Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'])
         plt.setp(ax1.get_xticklabels(), fontsize=22, rotation=60)
@@ -621,6 +642,8 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
     # Setting center of image.
     center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
     pix_center = mp.to_image_pixel_position(list(center))
+
+    P = loads.shape[1]
     
     if isinstance(times, list):
         num_figs = len(times)
@@ -750,13 +773,13 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
         # Updating the centroids for the animations.
         scatter_centroid.set_offsets(pix_means)
 
-        hour = 8 + (time % 12)
+        hour = 8 + (time % (P/6))
         if hour < 12:
             hour = str(hour) + ':00 AM'
         else:
             hour = str(hour - 12) + ':00 PM'
 
-        day = time/12
+        day = time/(P/6)
 
         ax.set_xlabel(days[day] + ' ' + hour)
 
@@ -806,6 +829,8 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
     # Setting center of image.
     center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
     pix_center = mp.to_image_pixel_position(list(center))
+
+    P = len(means)
     
     if isinstance(times, list):
         num_figs = len(times)
@@ -868,8 +893,8 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
         scatter.set_color([colors[labels[i]] for i in range(len(labels))]) 
         scatter.set_edgecolor(['black' for i in range(len(labels))])
 
-        hour = time % 12
-        day = time/12
+        hour = time % (P/6)
+        day = time/(P/6)
 
         ax.set_xlabel(days[day] + ' ' + str(8+hour) + ':00')
 

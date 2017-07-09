@@ -105,6 +105,7 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
 
     days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
 
+    P = loads.shape[1]
 
     if num_comps == 4:
         colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
@@ -186,8 +187,8 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
     # Updating the centroids for the animations.
     scatter_centroid.set_offsets(means)
     
-    hour = time % 12
-    day = time/12
+    hour = time % (P/6)
+    day = time/(P/6)
     
     ax.set_xlabel(days[day] + ' ' + str(8+hour) + ':00')
     

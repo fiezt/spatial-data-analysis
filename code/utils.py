@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import os
 import datetime
+from pandas.tseries.holiday import USFederalHolidayCalendar
 
 
 def load_data(data_path):
@@ -20,14 +21,15 @@ def load_data(data_path):
     :return day_hour_to_idx: Dictionary of (day, hour) pair to column in avg_loads.
     """
 
-    curr_dir = os.getcwd()
-    data_path = curr_dir + '/../data/'
-
     with open(os.path.join(data_path, 'hourlyUtilization100_uncapped.pck'), 'rb') as f:
-     load_data = pickle.load(f)
+        load_data = pickle.load(f)
         
     with open(os.path.join(data_path, 'ElementKeytoLatLong.pck'), 'rb') as f:
         locations = pickle.load(f)
+
+    cal = USFederalHolidayCalendar()
+    holidays = cal.holidays(start='2000-01-01', end=datetime.datetime.now().date()).to_pydatetime()
+    holidays = [hol.date() for hol in holidays]
 
     avg_loads = []
 
@@ -44,9 +46,9 @@ def load_data(data_path):
         # Loading the data for a single block.
         block_data = pd.DataFrame(load_data[key].items(), columns=['Datetime', 'Load'])
 
-        # Clipping the loads to be no higher than 2.5
-        block_data['Load'] = block_data['Load'].clip(upper=2.5)
-        
+        # Clipping the loads to be no higher than 1.5
+        block_data['Load'] = block_data['Load'].clip_upper(1.5)
+
         block_data['Datetime'] = pd.to_datetime(block_data['Datetime'])
         
         block_data.sort_values(by='Datetime', inplace=True)
@@ -59,14 +61,8 @@ def load_data(data_path):
         # Getting rid of Sunday since there is no paid parking.
         block_data = block_data.loc[block_data['Day'] != 6]
         
-        # Getting the dates where the total parking is 0 because of holidays.
-        empty_day_dates = []
-
-        # No parking on Independence day.
-        empty_day_dates.append(datetime.date(2016,7,4))
-        
         # Dropping the days where the total parking is 0.
-        block_data = block_data.loc[~block_data['Date'].isin(empty_day_dates)]
+        block_data = block_data.loc[~block_data['Date'].isin(holidays)]
         block_data.reset_index(inplace=True, drop=True)
         
         park_data[key] = block_data

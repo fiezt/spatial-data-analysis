@@ -55,7 +55,8 @@ def get_distances(means):
         for i in xrange(num_comps):
             curr_points = data[np.where(np.array(labels) == i)[0].tolist()]
 
-            dist = np.array([measure(curr_points[j], centroids[i]) for j in xrange(len(curr_points))]).mean()  
+            dist = np.array([as_the_crow_flies_distance(curr_points[j], centroids[i]) 
+                            for j in xrange(len(curr_points))]).mean()  
 
             current_time_dist.append(dist)
         

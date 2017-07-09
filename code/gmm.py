@@ -40,7 +40,7 @@ def locational_demand_analysis(park_data, gps_loc, N):
     return results
 
 
-def GMM(park_data, gps_loc, times, N, iter):
+def GMM(park_data, gps_loc, times, N, iteration):
     """Finding the GMM prediction error for a day and hour combination.
     
     :param park_data: Multi-index DataFrame containing dates and blockface key
@@ -57,7 +57,7 @@ def GMM(park_data, gps_loc, times, N, iter):
     numpy arrays of the centroids of each fit.
     """
 
-    time = times[iter]
+    time = times[iteration]
     day = time[0]
     hour = time[1]
 
@@ -65,7 +65,7 @@ def GMM(park_data, gps_loc, times, N, iter):
     block_keys = sorted(data_df.index.get_level_values(1).unique().tolist())
 
     # Each row is an element key, and each column is a date.
-    data = data_df['Load'].values.reshape((N, -1))
+    data = data_df['Load'].values.reshape((-1, N)).T
 
     P = data.shape[1]
 
@@ -73,8 +73,8 @@ def GMM(park_data, gps_loc, times, N, iter):
 
     centers = []
 
-    morans_mixture = []
-    morans_adjacent = []
+    morans_mixture = []      
+    morans_adjacent = []    
 
     # Fitting the model for each date for the given day and hour combination.
     for train_time in xrange(P):
@@ -82,7 +82,7 @@ def GMM(park_data, gps_loc, times, N, iter):
         train = np.hstack((data[:, train_time, None], gps_loc))
 
         # Saving the scaling so it can be applied to the test set as well.
-        unscaled_loads = train[:,0]
+        unscaled_loads = train[:,0]    
         scaler = MinMaxScaler().fit(train)
         train = scaler.transform(train)
 

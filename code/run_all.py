@@ -9,18 +9,13 @@ import kmeans_utils
 
 
 def run_figures(avg_loads, gps_loc, park_data, N, P, idx_to_day_hour, 
-                day_hour_to_idx, fig_path, animation_path):
+                day_hour_to_idx, fig_path, animation_path, time, time1, time2):
     """
 
     """
 
     figure_functions.model_selection(avg_loads, gps_loc, P, fig_path)
     figure_functions.create_animation(avg_loads, gps_loc, N, P, fig_path, animation_path)
-
-    time = 58
-    time1 = 50
-    time2 = 58
-
     
     fig, ax = figure_functions.mixture_plot(loads=avg_loads, gps_loc=gps_loc, 
                                             times=[time1], N=N, fig_path=fig_path, 
@@ -89,7 +84,7 @@ def write_gmm_results(errors, results_path):
     """
 
     with open(os.path.join(results_path, 'gmm_pred_results.txt'), 'wb') as f: 
-        errors = np.array(errors).reshape((6,12))
+        errors = np.array(errors).reshape((6, len(errors)/6))
         
         day_avg_errs = errors.mean(axis=1)
         hour_avg_errs = errors.mean(axis=0)
@@ -111,6 +106,8 @@ def write_gmm_results(errors, results_path):
         hour_errors = ''.join(hour_errors)
         
         f.write(hour_errors)
+
+
 
 
 def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
@@ -227,7 +224,7 @@ def write_centroid_distance_results(days, hours, means, results_path):
 
     """
 
-    distances = kmeans_utils.get_time_scores(means)
+    distances = kmeans_utils.get_distances(means)
     distances = distances.mean(axis=1)
 
     index = []
@@ -245,7 +242,7 @@ def write_centroid_distance_results(days, hours, means, results_path):
             
         index.append(day + ' ' + hour)
 
-    col = 'Average Distance in Meters'
+    col = ['Average Distance in Meters']
 
     distances_df = pd.DataFrame(data=distances, index=index, columns=col)
     distances_df.to_csv(os.path.join(results_path, 'average_distances.csv'), 
@@ -267,7 +264,10 @@ def main():
     fig_path = curr_dir + '/../figs/'
     results_path = curr_dir + '/../results/'
     animation_path = curr_dir + '/../animation/'
-
+    
+    time = 58
+    time1 = 50
+    time2 = 58
     
     params = utils.load_data(data_path)
     gps_loc, avg_loads, park_data, N, P, idx_to_day_hour, day_hour_to_idx = params
