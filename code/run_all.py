@@ -8,58 +8,76 @@ import figure_functions
 import kmeans_utils
 
 
-def run_figures(avg_loads, gps_loc, park_data, N, P, idx_to_day_hour, 
-                day_hour_to_idx, fig_path, animation_path, time, time1, time2):
+def run_figures(loads, gps_loc, N, P, fig_path, animation_path, time, time1, time2):
+    """Create the visualizations of the spatial characteristics of the parking data.
+
+    :param loads: Numpy array with each row containing the load for a day of 
+    week and time, where each column is a day of week and hour.
+    :param gps_loc: Numpy array with each row containing the lat, long pair 
+    midpoints for a block.
+    :param N: Integer number of samples (blocks) in the data.
+    :param fig_path: File path to save figures to.
+    :param animation_path: File path to save mixture animation to.
+    :param time: Integer index of column to use from loads for majority of plots.
+    :param time1: Integer index of column index to use for mixture and contour plots.
+    :param time2: Integer index of column index to use for mixture and contour plots.
     """
 
-    """
-
-    figure_functions.model_selection(avg_loads, gps_loc, P, fig_path)
-    figure_functions.create_animation(avg_loads, gps_loc, N, P, fig_path, animation_path)
+    figure_functions.model_selection(loads, gps_loc, P, fig_path)
+    figure_functions.create_animation(loads, gps_loc, N, P, fig_path, animation_path)
     
-    fig, ax = figure_functions.mixture_plot(loads=avg_loads, gps_loc=gps_loc, 
+    fig, ax = figure_functions.mixture_plot(loads=loads, gps_loc=gps_loc, 
                                             times=[time1], N=N, fig_path=fig_path, 
                                             shape=(1,1), filename='friday_10am_gmm.png',
                                             title='')
-    fig, ax = figure_functions.mixture_plot(loads=avg_loads, gps_loc=gps_loc, 
+    fig, ax = figure_functions.mixture_plot(loads=loads, gps_loc=gps_loc, 
                                             times=[time2], N=N, fig_path=fig_path, 
                                             shape=(1,1), filename='friday_6pm_gmm.png',
                                             title='')
     
 
-    fig, ax = figure_functions.surface_plot(loads=avg_loads, gps_loc=gps_loc, time=time, 
+    fig, ax = figure_functions.surface_plot(loads=loads, gps_loc=gps_loc, time=time, 
                                             fig_path=fig_path)
 
-    fig, ax = figure_functions.interpolation(loads=avg_loads, gps_loc=gps_loc, time=time,
+    fig, ax = figure_functions.interpolation(loads=loads, gps_loc=gps_loc, time=time,
                                              N=N, fig_path=fig_path)
 
-    fig, ax = figure_functions.triangular_grid(loads=avg_loads, gps_loc=gps_loc, time=time,
+    fig, ax = figure_functions.triangular_grid(loads=loads, gps_loc=gps_loc, time=time,
                                                N=N, fig_path=fig_path)
 
-    fig, ax = figure_functions.contour_plot(loads=avg_loads, gps_loc=gps_loc, time=time1,
+    fig, ax = figure_functions.contour_plot(loads=loads, gps_loc=gps_loc, time=time1,
                                             title='Friday 10:00 AM Average Load Contours', 
                                             N=N, filename='friday_10am.png', fig_path=fig_path, 
                                             contours=10)
 
-    fig, ax = figure_functions.contour_plot(loads=avg_loads, gps_loc=gps_loc, time=time2,
+    fig, ax = figure_functions.contour_plot(loads=loads, gps_loc=gps_loc, time=time2,
                                             title='Friday 6:00 PM Average Load Contours', 
                                             N=N, filename='friday_6pm.png', fig_path=fig_path, 
                                             contours=10)
 
     fig, ax = figure_functions.voronoi(gps_loc=gps_loc, N=N, fig_path=fig_path)
     
-    fig, ax = figure_functions.spatial_heterogeneity(loads=avg_loads, time=time, 
+    fig, ax = figure_functions.spatial_heterogeneity(loads=loads, time=time, 
                                                      N=N, fig_path=fig_path)
 
-    fig, ax = figure_functions.temporal_heterogeneity(loads=avg_loads, time=time, 
+    fig, ax = figure_functions.temporal_heterogeneity(loads=loads, time=time, 
                                                       P=P, fig_path=fig_path)
 
-    fig, ax = figure_functions.temporal_day_plots(loads=avg_loads, P=P, fig_path=fig_path)
+    fig, ax = figure_functions.temporal_day_plots(loads=loads, P=P, fig_path=fig_path)
 
-    fig, ax = figure_functions.temporal_hour_plots(loads=avg_loads, fig_path=fig_path)
+    fig, ax = figure_functions.temporal_hour_plots(loads=loads, fig_path=fig_path)
 
 
 def gmm_simulations(park_data, gps_loc, N, fig_path, results_path):
+    """Running several GMM tests including prediction and spatial correlation.
+    
+    :param park_data:
+    :param gps_loc:
+    :param N:
+    :param fig_path:
+    :param results_path:
+    """
+
     results = gmm.locational_demand_analysis(park_data, gps_loc, N)
 
     days = [result[0] for result in results]
@@ -78,7 +96,7 @@ def gmm_simulations(park_data, gps_loc, N, fig_path, results_path):
     create_centroid_figure(means, gps_loc, N, fig_path)
 
 
-def write_gmm_results(errors, results_path):
+def write_gmm_results(days, hours, errors, results_path):
     """
 
     """
@@ -107,9 +125,22 @@ def write_gmm_results(errors, results_path):
         
         f.write(hour_errors)
 
+    index = []
+    day_map = {0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday'}
 
+    for d, h in zip(days, hours):
+        day = day_map[d]
 
+        if h < 12:
+            hour = str(h) + ':00 AM'
+        elif hour == 12:
+            hour = str(h) + ':00 PM'
+        else:
+            hour = str(h-12) + ':00 PM'
+            
+        index.append(day + ' ' + hour)
 
+    
 def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
     """
 
@@ -264,7 +295,7 @@ def main():
     fig_path = curr_dir + '/../figs/'
     results_path = curr_dir + '/../results/'
     animation_path = curr_dir + '/../animation/'
-    
+
     time = 58
     time1 = 50
     time2 = 58
@@ -272,11 +303,10 @@ def main():
     params = utils.load_data(data_path)
     gps_loc, avg_loads, park_data, N, P, idx_to_day_hour, day_hour_to_idx = params
 
-    run_figures(avg_loads, gps_loc, park_data, N, P, idx_to_day_hour, 
-                day_hour_to_idx, fig_path, animation_path)
+    run_figures(avg_loads, gps_loc, N, P, fig_path, animation_path, time, time1, time2)
     
-    park_data = utils.load_daily_data(park_data)
-    gmm_simulations(park_data, gps_loc, N, fig_path, results_path)
+    # park_data = utils.load_daily_data(park_data)
+    # gmm_simulations(park_data, gps_loc, N, fig_path, results_path)
     
 
 if __name__ == '__main__':

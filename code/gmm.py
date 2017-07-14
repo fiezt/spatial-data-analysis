@@ -86,7 +86,12 @@ def GMM(park_data, gps_loc, times, N, iteration):
         scaler = MinMaxScaler().fit(train)
         train = scaler.transform(train)
 
-        gmm = mixture.GaussianMixture(n_init=200, n_components=4, 
+        comp_map = np.array([6, 3, 2, 3, 3, 3, 4, 5, 4, 6, 4, 3, 4, 4, 3, 4, 4, 5, 5, 4, 4, 6, 3,
+                             3, 8, 2, 3, 3, 5, 4, 4, 6, 6, 4, 3, 3, 8, 3, 3, 3, 3, 4, 4, 5, 4, 5,
+                             4, 3, 5, 3, 3, 4, 4, 4, 4, 6, 5, 5, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 3,
+                             3, 3, 3])
+
+        gmm = mixture.GaussianMixture(n_init=200, n_components=comp_map[time], 
                                       covariance_type='diag').fit(train)
 
         # Scaling the mean and covariances back to GPS coordinates.

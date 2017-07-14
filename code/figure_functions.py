@@ -42,12 +42,11 @@ def setup_image():
 def surface_plot(loads, gps_loc, time, fig_path, filename='surface.png'):
     """Create 3D surface plot of load data.
 
-
     :param loads: Numpy array with each row containing the load for a day of 
     week and time, where each column is a day of week and hour.
     :param gps_loc: Numpy array with each row containing the lat, long pair 
     midpoints for a block.
-    :param time: Column index to get the load data from.
+    :param time: Integer column index to get the load data from.
     :param fig_path: Path to save file plot to.
     :param filename: Name of the file to save.
 
@@ -102,9 +101,9 @@ def interpolation(loads, gps_loc, time, N, fig_path, filename='interpolation.png
     week and time, where each column is a day of week and hour.
     :param gps_loc: Numpy array with each row containing the lat, long pair 
     midpoints for a block.
-    :param time: Column index to get the load data from.
-    :param N: Number of samples (locations).
-    :param fig_path: Path to save file plot to.
+    :param time: Integer column index to get the load data from.
+    :param N: Integer number of samples (locations).
+    :param fig_path: Path to save file plot to and read background image from.
     :param filename: Name of the file to save.
 
     :return fig, ax: Matplotlib figure and axes objects.
@@ -161,9 +160,9 @@ def triangular_grid(loads, gps_loc, time, N, fig_path, filename='triangle.png'):
     week and time, where each column is a day of week and hour.
     :param gps_loc: Numpy array with each row containing the lat, long pair 
     midpoints for a block.
-    :param time: Column index to get the load data from.
-    :param N: Number of samples (locations).
-    :param fig_path: Path to save file plot to.
+    :param time: Integer column index to get the load data from.
+    :param N: Integer number of samples (locations).
+    :param fig_path: Path to save file plot to and read background image from.
     :param filename: Name of the file to save.
 
     :return fig, ax: Matplotlib figure and axes objects.
@@ -216,11 +215,11 @@ def contour_plot(loads, gps_loc, time, N, fig_path, title,
     week and time, where each column is a day of week and hour.
     :param gps_loc: Numpy array with each row containing the lat, long pair 
     midpoints for a block.
-    :param time: Column index to get the load data from.
-    :param N: Number of samples (locations).
-    :param fig_path: Path to save file plot to.
+    :param time: Integer column index to get the load data from.
+    :param N: Integer number of samples (locations).
+    :param fig_path: Path to save file plot to and read background image from.
     :param title: Figure title for the plot.
-    :param contours: Number of contour levels to use.
+    :param contours: Integer number of contour levels to use.
     :param filename: Name of the file to save.
 
     :return fig, ax: Matplotlib figure and axes objects.
@@ -275,7 +274,7 @@ def voronoi(gps_loc, N, fig_path, filename='voronoi.png'):
 
     :param gps_loc: Numpy array with each row containing the lat, long pair 
     midpoints for a block.
-    :param N: Number of samples (locations).
+    :param N: Integer number of samples (locations).
     :param fig_path: Path to save file plot to.
     :param filename: Name of the file to save.
 
@@ -293,7 +292,7 @@ def voronoi(gps_loc, N, fig_path, filename='voronoi.png'):
     ax = plt.axes(xlim=(min(pixpos[:,0]), max(pixpos[:,0])), 
                   ylim=(min(pixpos[:,1]), max(pixpos[:,1])))
 
-    # Computing the Voronoi Tesselation
+    # Computing the Voronoi Tesselation.
     vor = Voronoi(pixpos)
 
     # Plotting the Voronoi Diagram.
@@ -321,10 +320,10 @@ def voronoi_finite_polygons_2d(vor, radius=None):
     :param vor: Voronoi input diagram
     :param radius: Float distance to 'points at infinity'.
 
-    :param regions : List of tuples indexes of vertices in each revised Voronoi regions.
-    :param vertices : List of tuples coordinates for revised Voronoi vertices. 
-    Same as coordinates of input vertices, with 'points at infinity' appended to the
-    end.
+    :param regions: List of tuples indexes of vertices in each revised Voronoi regions.
+    :param vertices: List of tuples coordinates for revised Voronoi vertices. 
+    Same as coordinates of input vertices, with 'points at infinity' appended 
+    to the end.
     """
 
     if vor.points.shape[1] != 2:
@@ -337,22 +336,22 @@ def voronoi_finite_polygons_2d(vor, radius=None):
     if radius is None:
         radius = vor.points.ptp().max()
 
-    # Construct a map containing all ridges for a given point
+    # Construct a map containing all ridges for a given point.
     all_ridges = {}
     for (p1, p2), (v1, v2) in zip(vor.ridge_points, vor.ridge_vertices):
         all_ridges.setdefault(p1, []).append((p2, v1, v2))
         all_ridges.setdefault(p2, []).append((p1, v1, v2))
 
-    # Reconstruct infinite regions
+    # Reconstruct infinite regions.
     for p1, region in enumerate(vor.point_region):
         vertices = vor.regions[region]
 
         if all(v >= 0 for v in vertices):
-            # finite region
+            # Finite region.
             new_regions.append(vertices)
             continue
 
-        # reconstruct a non-finite region
+        # Reconstruct a non-finite region.
         ridges = all_ridges[p1]
         new_region = [v for v in vertices if v >= 0]
 
@@ -360,13 +359,13 @@ def voronoi_finite_polygons_2d(vor, radius=None):
             if v2 < 0:
                 v1, v2 = v2, v1
             if v1 >= 0:
-                # finite ridge: already in the region
+                # Finite ridge: already in the region.
                 continue
 
-            # Compute the missing endpoint of an infinite ridge
-            t = vor.points[p2] - vor.points[p1] # tangent
+            # Compute the missing endpoint of an infinite ridge.
+            t = vor.points[p2] - vor.points[p1]  # Tangent.
             t /= np.linalg.norm(t)
-            n = np.array([-t[1], t[0]])  # normal
+            n = np.array([-t[1], t[0]])  # Normal.
 
             midpoint = vor.points[[p1, p2]].mean(axis=0)
             direction = np.sign(np.dot(midpoint - center, n)) * n
@@ -375,13 +374,12 @@ def voronoi_finite_polygons_2d(vor, radius=None):
             new_region.append(len(new_vertices))
             new_vertices.append(far_point.tolist())
 
-        # sort region counterclockwise
+        # Sort region counterclockwise.
         vs = np.asarray([new_vertices[v] for v in new_region])
         c = vs.mean(axis=0)
         angles = np.arctan2(vs[:,1] - c[1], vs[:,0] - c[0])
         new_region = np.array(new_region)[np.argsort(angles)]
 
-        # finish
         new_regions.append(new_region.tolist())
 
     return new_regions, np.asarray(new_vertices)
@@ -392,8 +390,8 @@ def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogene
 
     :param loads: Numpy array with each row containing the load for a day of 
     week and time, where each column is a day of week and hour.
-    :param time: Column index to get the load data from.
-    :param N: Number of samples (locations).
+    :param time: Integer column index to get the load data from.
+    :param N: Integer number of samples (locations).
     :param fig_path: Path to save file plot to.
     :param filename: Name of the file to save.
 
@@ -401,6 +399,8 @@ def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogene
     """
 
     bins = range(N)
+
+    # Getting the load data for a specific time to plot for each block key.
     counts = loads[:, time]
 
     sns.set()
@@ -438,8 +438,8 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
 
     :param loads: Numpy array with each row containing the load for a day of 
     week and time, where each column is a day of week and hour.
-    :param time: Column index to get the load data from.
-    :param P: Number of times.
+    :param time: Integer column index to get the load data from.
+    :param P: Integer number of total hours in the week with loads.
     :param fig_path: Path to save file plot to.
     :param filename: Name of the file to save.
 
@@ -447,6 +447,8 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
     """
 
     bins = range(P)
+
+    # Getting the mean load over all locations at each time for the plot.
     counts = np.mean(loads, axis=0)
 
     sns.set()
@@ -465,7 +467,9 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
     plt.bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
     plt.xlim([-.3, P+.2])
 
+    # 10 hour days.
     if P == 60:
+        # Adding lines to separate days more clearly.
         ax.axvline(x=0, color='black')
         ax.axvline(x=10, color='black')
         ax.axvline(x=20, color='black')
@@ -477,13 +481,17 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
         plt.title('Temporal Heterogeneity', fontsize=22)
         plt.ylabel('Load', fontsize=22)
 
+        # Labels of the day of the week for each portion of the plot.
         ax.annotate('Monday',xy=(1.7,-.05),xytext=(1.7,-.05), annotation_clip=False, fontsize=16)
         ax.annotate('Tuesday',xy=(11.7,-.05),xytext=(11.7,-.05), annotation_clip=False, fontsize=16)
         ax.annotate('Wednesday',xy=(20.35,-.05),xytext=(20.35,-.05), annotation_clip=False, fontsize=16)
         ax.annotate('Thursday',xy=(31.6,-.05),xytext=(31.6,-.05), annotation_clip=False, fontsize=16)
         ax.annotate('Friday',xy=(42.8,-.05),xytext=(42.8,-.05), annotation_clip=False, fontsize=16)
         ax.annotate('Saturday',xy=(51.6,-.05),xytext=(51.6,-.05), annotation_clip=False, fontsize=16)
+
+    # 12 hour days.
     elif P == 72:
+        # Adding lines to separate days more clearly.
         ax.axvline(x=0, color='black')
         ax.axvline(x=12, color='black')
         ax.axvline(x=24, color='black')
@@ -495,6 +503,7 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
         plt.title('Temporal Heterogeneity', fontsize=22)
         plt.ylabel('Load', fontsize=22)
 
+        # Labels of the day of the week for each portion of the plot.
         ax.annotate('Monday', xy=(2,-.05), xytext=(2,-.05), annotation_clip=False, fontsize=16)
         ax.annotate('Tuesday', xy=(14,-.05), xytext=(14,-.05), annotation_clip=False, fontsize=16)
         ax.annotate('Wednesday', xy=(24.5,-.05), xytext=(24.5,-.05), annotation_clip=False, fontsize=16)
@@ -511,9 +520,17 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
     return fig, ax
 
 
-def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots'):
-    """
+def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots.png'):
+    """Create subplots containing bar plots of the load for each day of the week.
 
+
+    :param loads: Numpy array with each row containing the load for a day of 
+    week and time, where each column is a day of week and hour.
+    :param P: Integer number of total hours in the week with loads.
+    :param fig_path: Path to save file plot to.
+    :param filename: Name of the file to save.
+
+    :return fig, ax: Matplotlib figure and axes objects.
     """
 
     sns.set()
@@ -523,12 +540,16 @@ def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots'):
 
     day_dict = {1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 
                 5: 'Friday', 6: 'Saturday'}
+
+    # Getting the indexes that correspond to each of the days in list of list.
     days = [[i for i in range(j, j+(P/6))] for j in range(0, P, (P/6))]
 
     i = 1
 
     for day in days:
         bins = range(8, (P/6) + 8)
+
+        # Getting the mean loads for the indexes corresponding to the hours of the given day.
         counts = loads.mean(axis=0)[day]
 
         ax1 = plt.subplot(1,6,i)
@@ -558,9 +579,18 @@ def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots'):
     return fig, ax
 
 
-def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots'):
-    """
+def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots.png'):
+    """Creating subplots of the average load for each hour of the day by day of week.
 
+    This function creates a subplot for each hour of the day and in each subplot
+    is a bar plot with the average load at each day of the week for that hour.
+
+    :param loads: Numpy array with each row containing the load for a day of 
+    week and time, where each column is a day of week and hour.
+    :param fig_path: Path to save file plot to.
+    :param filename: Name of the file to save.
+
+    :return fig, ax: Matplotlib figure and axes objects.
     """
 
     sns.set()
@@ -571,11 +601,15 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots'):
     fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=(6*ncols, 21))
 
     P = loads.shape[1]
+
+    # Getting the indexes that correspond to each of the hours in list of list.
     hours = [[j + i*(P/6) for i in range(6)] for j in range((P/6))]
 
     i = 1
     for hour in hours:
         bins = range(6)
+
+        # Getting the mean loads for the indexes corresponding to the days of the given hour.
         counts = loads.mean(axis=0)[hour]
         
         ax1 = plt.subplot(nrows, ncols, i)
@@ -609,25 +643,32 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
                                          [47.61707117, -122.34971354], [47.61076144, -122.34305349]]),
                  num_comps=4, shape=None, filename='mixture_plot.png', 
                  title='Gaussian Mixture Model on Average Load Distribution and Location'):
-    
     """Plotting the mixture model results at a time or times of day.
+
+    This function first creates a mixture model of the load data and the spatial
+    characteristics, e.g. the GPS coordinates of the block locations. Thus the 
+    mixture model has features for each block of the load at the time, and the
+    latitude and longitude of the center of the block. The centroids and the 
+    curves of the first two standard deviations of spatial components are drawn
+    on the map. Each block is indicated by a scatter point and colored according
+    to the probabilistic assignment the mixture model designates the block.
     
-    :param loads: 2d numpy array with each row containing the load for a day of 
+    :param loads: Numpy array with each row containing the load for a day of 
     week and time, where each column is a day of week and hour.
-    :param gps_loc: Numpy array, each row containing the lat and long of a block.
-    :param times: Column index to get the load data from.
-    :param N: The number of samples (blocks) in the data.
-    :param num_comps: Number of mixture components for the model.
-    :param fig_path: path to read background figure from.
+    :param gps_loc: Numpy array with each row containing the lat, long pair 
+    midpoints for a block.
+    :param times: List of column indexes to get the load data from.
+    :param N: Integer number of samples (locations).
+    :param num_comps: Integer number of mixture components for the model.
+    :param fig_path: Path to save file plot to and read background image from.
     :param default_means: Numpy array, each row containing an array of the 
     lat and long to use as the default mean so colors will stay the same
     when making several plots.
-    :param shape: tuple of the row and col dimension of subplots.
+    :param shape: Tuple of the row and col dimension of subplots.
     :param filename: Name to save the file as.
     :param title: Title for the figure.
     
-    :return fig: Figure object containing the GMM model on the map.
-    :return ax: ax object.
+    :return fig, ax: Matplotlib figure and axes objects.
     :return means: Numpy array where each row contains an array of the lat and
     long of a centroid of the GMM.
     """
@@ -715,20 +756,23 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
 
         labels = gmm.predict(cluster_data)    
 
-        color_codes = {}
-        for i in range(num_comps):
+        if num_comps == 4:
+            color_codes = {}
+            for i in range(num_comps):
 
-            # Finding the default centroid closest to the current centroid.
-            dists = [(j, np.linalg.norm(means[i] - default_means[j])) for j in range(num_comps)]
-            best_colors = sorted(dists, key=lambda item:item[1])
+                # Finding the default centroid closest to the current centroid.
+                dists = [(j, np.linalg.norm(means[i] - default_means[j])) for j in range(num_comps)]
+                best_colors = sorted(dists, key=lambda item:item[1])
 
-            # Finding the color that is unused that is closest to the current centroid.
-            unused_colors = [color[0] for color in best_colors if color[0] 
-                             not in color_codes.values()]
+                # Finding the color that is unused that is closest to the current centroid.
+                unused_colors = [color[0] for color in best_colors if color[0] 
+                                 not in color_codes.values()]
 
-            # Choosing the closest centroid that is not already used.
-            choice = unused_colors[0]
-            color_codes[i] = choice
+                # Choosing the closest centroid that is not already used.
+                choice = unused_colors[0]
+                color_codes[i] = choice
+        else:
+            color_codes = {i:i for i in range(num_comps)}
 
         # Setting the cluster colors to keep the colors the same each iteration.
         scatter.set_color([colors[color_codes[labels[i]]] for i in range(len(labels))]) 
@@ -801,22 +845,32 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
                    title='Centroids'):
     
     """Plotting the centroids from different dates at the same weekday and hour.
+
+    This function takes in a parameter, means, which is a list of list of numpy 
+    arrays in which each numpy array in the inner list contains a set of 
+    centroids from the Gaussian mixture modeling procedure for a particular date
+    and the inner list represents a particular day of the week and hour of the
+    day combo. For each of the times indexes indicated by the times parameter,
+    the centroids that were fit at a particular day of the week and hour of the
+    day combo are clustered. These clusters are then plotted as scatter points
+    at the locations they are. Each cluster is colored differently to indicate
+    the cluster difference.
     
     :param means: List of list of numpy arrays, with each outer list containing
     and inner list which contains a list of numpy arrays where each numpy array
-    in the inner lists contains 2-d arrays that contain each of the centroids
+    in the inner lists contains a 2-d array that contains each of the centroids
     for a GMM fit of a particular date for the weekday and hour.
-    :param gps_loc: Numpy array, each row containing the lat and long of a block.
-    :param N: Integer number of samples (blocks) in the data.
+    :param gps_loc: Numpy array with each row containing the lat, long pair 
+    midpoints for a block.
+    :param N: Integer number of samples (locations).
     :param times: List of indexes to get the load data from.
-    :param fig_path: Path to read background figure from.
+    :param fig_path: Path to save file plot to and read background image from.
     :param num_comps: Integer number of mixture components for the model.
     :param shape: Tuple of the row and col dimension of subplots.
     :param filename: Name to save the file as.
     :param title: Title for the figure.
 
-    :return fig, ax: Figure object containing the GMM model on the map, and the
-    corresponding ax object.
+    :return fig, ax: Matplotlib figure and axes objects.
     """
 
     upleft, bttmright, imgsize = setup_image()
@@ -912,19 +966,33 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
 
 
 def model_selection(loads, gps_loc, P, fig_path):
-    """
+    """Using various criterion to evaluate the number of components to use in GMM.
 
+    This function creates a Gaussian mixture model with a varying range of 
+    components for each of the times in the parameter loads. The average
+    akaike information criterion, bayesian information criterion, and likelihood
+    are then averaged over all times and plotted in order to find the correct
+    number of components to use in the model and these graphs are plotted.
+
+    :param loads: Numpy array with each row containing the load for a day of 
+    week and time, where each column is a day of week and hour.
+    :param gps_loc: Numpy array with each row containing the lat, long pair 
+    midpoints for a block.
+    :param P: Integer number of total hours in the week with loads.
+    :param fig_path: Path to save file plot to.
     """
 
     model_selection = {"likelihood": [], "bic": [], "aic": []} 
     min_comps = 1
-    max_comps = 20
+    max_comps = 21
 
+    # Fitting mixture models at each possible time the loads are available.
     for time in range(P):    
         likelihoods = []
         bics = []
         aics = []
 
+        # Varying the number of components and getting AIC, BIC, and likelihood.
         for num_comps in range(min_comps, max_comps):
             cluster_data = np.hstack((loads[:, time, None], gps_loc))
 
@@ -947,13 +1015,19 @@ def model_selection(loads, gps_loc, P, fig_path):
     
     # Likelihood model selection plot.
     plt.figure()
+
+    # Getting the mean likelihood over all times for varying number of components.
     mean_likelihood = np.mean(np.vstack((model_selection['likelihood'])), axis=0)
+
     plt.plot(range(min_comps, max_comps), mean_likelihood, 'o-', color='red')
+    plt.xlim([-0.1, 20.1])
+
+    # Plotting vertical lines to make the separation of number of components clear.
+    plt.axvline(x=0, color='black')
     plt.axvline(x=5, color='black')
     plt.axvline(x=10, color='black')
     plt.axvline(x=15, color='black')
     plt.axvline(x=20, color='black')
-    plt.axvline(x=25, color='black')
     plt.xlabel('Number of Components')
     plt.ylabel('Likelihood')
     plt.title('Likelihood Model Selection')
@@ -961,13 +1035,19 @@ def model_selection(loads, gps_loc, P, fig_path):
 
     # BIC model selection plot.
     plt.figure()
+
+    # Getting the mean BIC over all times for varying number of components.
     mean_bic = np.mean(np.vstack((model_selection['bic'])), axis=0)
+
     plt.plot(range(min_comps, max_comps), mean_bic, 'o-', color='red')
+    plt.xlim([-0.1, 20.1])
+
+    # Plotting vertical lines to make the separation of number of components clear.
+    plt.axvline(x=0, color='black')
     plt.axvline(x=5, color='black')
     plt.axvline(x=10, color='black')
     plt.axvline(x=15, color='black')
     plt.axvline(x=20, color='black')
-    plt.axvline(x=25, color='black')
     plt.xlabel('Number of Components')
     plt.ylabel('BIC')
     plt.title('BIC Model Selection')
@@ -975,13 +1055,19 @@ def model_selection(loads, gps_loc, P, fig_path):
 
     # AIC model selection plot.
     plt.figure()
+
+    # Getting the mean AIC over all times for varying number of components.
     mean_aic = np.mean(np.vstack((model_selection['aic'])), axis=0)
+
+    # Plotting vertical lines to make the separation of number of components clear.
     plt.plot(range(min_comps, max_comps), mean_aic, 'o-', color='red')
+    plt.xlim([-0.1, 20.1])
+
+    plt.axvline(x=0, color='black')
     plt.axvline(x=5, color='black')
     plt.axvline(x=10, color='black')
     plt.axvline(x=15, color='black')
     plt.axvline(x=20, color='black')
-    plt.axvline(x=25, color='black')
     plt.xlabel('Number of Components')
     plt.ylabel('AIC')
     plt.title('AIC Model Selection')
@@ -991,8 +1077,17 @@ def model_selection(loads, gps_loc, P, fig_path):
 
 
 def create_animation(loads, gps_loc, N, P, fig_path, animation_path, num_comps=4):
-    """
+    """Create an animation of the GMM model using figures of each hour of load data.
 
+    :param loads: Numpy array with each row containing the load for a day of 
+    week and time, where each column is a day of week and hour.
+    :param gps_loc: Numpy array with each row containing the lat, long pair 
+    midpoints for a block.
+    :param N: Integer number of samples (locations).
+    :param P: Integer number of total hours in the week with loads.
+    :param fig_path: Path to save file plot to.
+    :param animation_path: Path to save the animation video to.
+    :param num_comps: Integer number of mixture components for the model.
     """
 
     params = mixture_animation.init_animation(gps_loc, num_comps, N, fig_path)
@@ -1000,6 +1095,7 @@ def create_animation(loads, gps_loc, N, P, fig_path, animation_path, num_comps=4
 
     times = range(P)
 
+    # Default means in attempt to keep the colors the same at each time index.
     default_means = np.array([[47.61348888, -122.34343007],[47.61179196, -122.34500616],
                               [47.61597088, -122.35054099],[47.61706817, -122.34617185]])
 
