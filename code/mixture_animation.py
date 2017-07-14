@@ -12,10 +12,10 @@ from map_overlay import MapOverlay
 def init_animation(gps_loc, num_comps, N, fig_path):
     """Initializing figure for animation.
     
-    :param gps_loc: numpy array, each row containing the lat and long of a block.
-    :param num_comps: Number of mixture components for the model.
-    :param N: The number of samples (blocks) in the data.
-    :param fig_path: path to read background figure from.
+    :param gps_loc: Numpy array, each row containing the lat and long of a block.
+    :param num_comps: Integer number of mixture components for the model.
+    :param N: Integer number of samples (locations).
+    :param fig_path: Path to read background figure from.
     
     :return fig: figure object containing the loaded background image.
     :return ax: ax object.
@@ -88,23 +88,18 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
     :param mp: MapOverlay object for plotting over the map.
     :param default_means: Numpy array of the default locations for the 
     centroids, to attempt to keep the colors for the clusters the same.
-    :param pix_center: List containing the x and y pixel center points of the 
-    image that is being overlayed on.
     :param center: Tuple of the center of the image with respect to gps coords.
     :param pix_center: List of the x and y pixel positions of the center of the image.
     :param loads: Numpy array containing the load data for the mixture model.
-    :param gps_loc: Numpy array containing the gps locations for the mixture model.
-    :param num_comps: Number of components to use for the mixture model.
+    :param gps_loc: Numpy array, each row containing the lat and long of a block.
+    :param num_comps: Integer number of mixture components for the model.
     
     :return: Updated ax, scatter, scatter_centroid, scatter_centroid, patches,
     and ellipses objects.
     """    
     
-    # Getting the time to perform the mixture on for the frame iteration.
     time = times[frame]
-
     days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
-
     P = loads.shape[1]
 
     if num_comps == 4:
@@ -113,8 +108,6 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
         colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
         
     cluster_data = np.hstack((loads[:, time, None], gps_loc))
-    
-    # Saving the cluster data prior to any scaling for plotting.
     cluster_data_true = cluster_data
 
     scaler = MinMaxScaler().fit(cluster_data)

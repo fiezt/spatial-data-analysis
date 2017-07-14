@@ -6,10 +6,14 @@ import scipy.stats as st
 
 def get_mixture_weights(train_labels, N):
     """Calculate the Moran I weight matrix using the mixture connections.
+
+    This function creates an adjacency matrix where each row represents a 
+    block and if a block is in the same mixture component as another it has 
+    a 1 in the corresponding column.
     
     :param train_labels: Numpy array like containing class label for each data 
     point in x.
-    :param N: Integer number of samples.
+    :param N: Integer number of samples (locations).
 
     :return weights: Numpy array of the weight matrix.
     """
@@ -32,7 +36,7 @@ def get_adjacent_weights(block_keys, N, path=os.getcwd() + '/../data'):
     """Get the weight matrix for Moran I by using adjacent connections.
     
     :param block_keys: List of block key identifiers.
-    :param N: Integer number of spatial units.
+    :param N: Integer number of samples (locations).
     :param path: File path to the data about neighboring blocks.
 
     :return weights: Numpy array weight matrix.
@@ -48,7 +52,7 @@ def moran_adjacent(x, block_keys, N, path=os.getcwd() + '/../data', weight_func=
 
     :param x: Numpy array of the variable of interest.
     :param block_keys: List of ordered block key identifiers.
-    :param N: Integer number of samples.
+    :param N: Integer number of samples (locations).
     :param path: The path to the location of the adjacency information.
     :param weight_func: Function to get the weights for Moran's I.
 
@@ -103,7 +107,7 @@ def moran_mixture(x, train_labels, N, weight_func=get_mixture_weights):
 def moran_expectation(N):
     """Calculate the expected value of Moran's I.
 
-    :param N: Integer of the number of spatial units
+    :param N: Integer number of samples (locations).
 
     :return expectation: Float of the expectation of Moran's I.
     """
@@ -118,7 +122,7 @@ def moran_variance(x, w, N):
     
     :param x: Numpy array of the variable of interest.
     :param w: Numpy array of the weight matrix.
-    :param N: Integer number of samples.
+    :param N: Integer number of samples (locations).
 
     :return var: Variance of the Moran I.
     """
@@ -166,7 +170,6 @@ def p_value(z):
     """
 
     p_one_sided = st.norm.sf(abs(z)) 
-
     p_two_sided = st.norm.sf(abs(z))*2 
 
     return p_one_sided, p_two_sided

@@ -15,8 +15,8 @@ def load_data(data_path):
     for a day of week and time, where each column is a day of week and hour.
     :return park_data: Dictionary of DataFrames, where each DataFrame contains
     the full load data for a block.
-    :return N: Number of samples, i.e. the number of blockfaces.
-    :return P: Number of times (day, hour) pairs.
+    :param N: Integer number of samples (locations).
+    :param P: Integer number of total hours in the week with loads.
     :return idx_to_day_hour: Dictionary of column in avg_loads to (day, hour) pair.
     :return day_hour_to_idx: Dictionary of (day, hour) pair to column in avg_loads.
     """
@@ -32,13 +32,10 @@ def load_data(data_path):
     holidays = [hol.date() for hol in holidays]
 
     avg_loads = []
-
     gps_loc = []
-
     park_data = {}
 
     elkeys = sorted(load_data.keys())
-
     N = len(elkeys)
 
     for key in elkeys:
@@ -124,8 +121,9 @@ def load_daily_data_standalone(data_path):
     :param data_path: File path to the directory with the data.
     
     :return park_data: Multi-index DataFrame with data sorted by date and block key.
-    :return gps_loc: Numpy array with each row containing the lat and long of the block.
-    :return N: The number of block faces in the data.
+    :return gps_loc: Numpy array with each row containing the lat, long pair 
+    midpoints for a block.
+    :param N: Integer number of samples (locations).
     """
 
     params = load_data(data_path)
