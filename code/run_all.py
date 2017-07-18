@@ -91,7 +91,14 @@ def gmm_simulations(park_data, gps_loc, N, fig_path, results_path):
 
     write_gmm_results(errors, results_path)
     write_moran_results(days, hours, morans_mixture, morans_adjacent, results_path)
-    write_centroid_distance_results(days, hours, means, results_path)
+
+    distances, centroids = kmeans_utils.get_distances(means)
+    write_centroid_distance_results(days, hours, means, distances, results_path)
+
+    all_time_points = kmeans_utils.get_centroid_circle_paths(distances, centroids)
+
+    fig, ax = figure_functions.centroid_radius(centroids, all_time_points, gps_loc,
+                                               times=range(6), fig_path=fig_path, shape=(2,3))
 
     fig, ax = figure_functions.centroid_plots(means, gps_loc, N, times=range(6), 
                                               fig_path=fig_path, shape=(2,3))
@@ -248,7 +255,7 @@ def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
     avg_df.to_csv(os.path.join(results_path, 'moran_averages.csv'), sep=',')
 
 
-def write_centroid_distance_results(days, hours, means, results_path):
+def write_centroid_distance_results(days, hours, means, distances, results_path):
     """Writing the average distance to centroid of cluster centroids from each point.
 
     :param days: List of days indexes.
@@ -257,10 +264,11 @@ def write_centroid_distance_results(days, hours, means, results_path):
     and inner list which contains a list of numpy arrays where each numpy array
     in the inner lists contains a 2-d array that contains each of the centroids
     for a GMM fit of a particular date for the weekday and hour.
+    :param distances: Numpy array of 2 dimensions with the mean as the crow flies distance
+    from all points in a cluster to the clusters centroid for each centroid in each row.
     :param results_path: File path to save results files to.
     """
 
-    distances = kmeans_utils.get_distances(means)
     distances = distances.mean(axis=1)
 
     index = []

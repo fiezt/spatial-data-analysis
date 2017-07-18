@@ -12,6 +12,7 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
 from sklearn import mixture
 from matplotlib.patches import Ellipse
+from matplotlib.patches import Polygon
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.misc import imread
 import seaborn as sns
@@ -962,6 +963,131 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
     
+    return fig, ax
+
+
+def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path, 
+                    shape=None, filename='centroid_radius.png', 
+                    title=''):
+    """Plotting centroids at a time and date and circle around each.
+
+    The input of the centroids are the centroids of all the centroids that 
+    were found by the locational demand analysis function in figure_functions.py.
+    The mean distance to these centroids are then used as the radius of the 
+    circle that is plotted around each centroid. 
+    
+    :param centroids: Numpy array of 3 dimensions with the first dimension the 
+    number of times the centroids were found for, the second dimension the 
+    number of centroids at the time, and the third dimension the GPS coords of each centroid.
+    :param all_time_points: Numpy array of 4 dimensions with the first dimension 
+    the number of times the centroids were found for, the second dimension the 
+    number of centroids at the time, the third dimension the points for the 
+    circle with the last dimension each point in GPS coords.
+    :param gps_loc: Numpy array with each row containing the lat, long pair 
+    midpoints for a block.
+    :param times: List of indexes to get the load data from.
+    :param fig_path: Path to save file plot to and read background image from.
+    :param num_comps: Integer number of mixture components for the model.
+    :param shape: Tuple of the row and col dimension of subplots.
+    :param filename: Name to save the file as.
+    :param title: Title for the figure.
+
+    :return fig, ax: Matplotlib figure and axes objects.
+    """
+
+    upleft, bttmright, imgsize = setup_image()
+
+    mp = MapOverlay(upleft, bttmright, imgsize)
+
+    N = gps_loc.shape[0]
+    P = centroids.shape[0]
+
+    # Converting the gps locations to pixel positions.
+    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
+
+    # Setting center of image.
+    center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
+    pix_center = mp.to_image_pixel_position(list(center))
+
+
+    if isinstance(times, list):
+        num_figs = len(times)
+    else:
+        num_figs = 1
+
+    if shape == None:
+        fig = plt.figure(figsize=(18*num_figs, 16))
+        fs = 35
+        fs_x = 35
+    else:
+        fig = plt.figure(figsize=(18*shape[1], 16*shape[0]))
+        fs = 35
+        fs_x = 35
+
+    for fig_count in range(1, num_figs+1):
+
+        if shape == None:
+            ax = fig.add_subplot(1, num_figs, fig_count)
+        else:
+            ax = fig.add_subplot(shape[0], shape[1], fig_count)
+
+        ax.set_xlim((min(pixpos[:,0])-100, max(pixpos[:,0])+100))
+        ax.set_ylim((min(pixpos[:,1])-100, max(pixpos[:,1])+100))
+
+        if isinstance(times, list):
+            time = times[fig_count-1]
+        else:
+            time = times
+
+        ax.invert_yaxis()
+
+        ax.axes.get_xaxis().set_ticks([])
+        ax.axes.get_yaxis().set_ticks([])
+
+        im = imread(os.path.join(fig_path, "belltown.png"))
+        ax.imshow(im)
+
+        ax.xaxis.label.set_fontsize(fs_x)
+
+        scatter_centroid = ax.scatter(centroids[0][:, 0], centroids[0][:, 1], s=500, 
+                                      color='red', edgecolor='black')
+
+        days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
+
+        for comp in xrange(centroids.shape[1]):
+            path = np.array([list(mp.to_image_pixel_position(all_time_points[time, comp, i])) 
+                             for i in xrange(all_time_points.shape[2])])
+            
+            poly = plt.Polygon(path, fill=None, edgecolor='black', lw=4)
+            
+            ax.add_patch(poly)
+
+        # Converting the centroids to pixel positions from gps coords.
+        pix_means = np.array([mp.to_image_pixel_position(list(centroids[time, i])) for i in xrange(centroids.shape[1])])
+
+        # Updating the centroids for the animations.
+        scatter_centroid.set_offsets(pix_means)
+
+        hour = 8 + (time % (P/6))
+        if hour < 12:
+            hour = str(hour) + ':00 AM'
+        else:
+            hour = str(hour - 12) + ':00 PM'
+
+        day = time/(P/6)
+
+        ax.set_xlabel(days[day] + ' ' + hour)
+
+    fig.tight_layout()
+    fig.suptitle(title, fontsize=fs)
+
+    if shape is not None and shape[0] > 1 and shape[1] == 1:
+        plt.subplots_adjust(top=0.975)
+    else:
+        plt.subplots_adjust(top=0.98)
+
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+
     return fig, ax
 
 

@@ -51,11 +51,15 @@ def get_distances(means, num_comps=4):
     for a GMM fit of a particular date for the weekday and hour.
     :param num_comps: Integer number of cluster components for the model.
 
-    :return distances: Numpy array of the mean as the crow flies distance
-    from all points in a cluster to the clusters centroid.
+    :return distances: Numpy array of 2 dimensions with the mean as the crow flies distance
+    from all points in a cluster to the clusters centroid for each centroid in each row.
+    :return centroids: Numpy array of 3 dimensions with the first dimension
+    the time, the second the centroids for that time, and the last the GPS coords
+    of the centroid for the time and centroid.
     """
     
     all_time_dist = []
+    all_time_centroids = []
     
     for time in xrange(len(means)):
         data = np.vstack((means[time]))
@@ -65,6 +69,8 @@ def get_distances(means, num_comps=4):
         centroids = kmeans.cluster_centers_
         
         current_time_dist = []
+        current_time_centroids = []
+
         for i in xrange(num_comps):
             curr_points = data[np.where(np.array(labels) == i)[0].tolist()]
 
@@ -72,12 +78,15 @@ def get_distances(means, num_comps=4):
                             for j in xrange(len(curr_points))]).mean()  
 
             current_time_dist.append(dist)
+            current_time_centroids.append(centroids[i])
         
         all_time_dist.append(current_time_dist)
+        all_time_centroids.append(current_time_centroids)
 
     distances = np.vstack((all_time_dist))
+    centroids = np.array((all_time_centroids))
     
-    return distances
+    return distances, centroids
 
 
 def as_the_crow_flies_distance(point1, point2):
@@ -89,18 +98,18 @@ def as_the_crow_flies_distance(point1, point2):
     :return distance: As the crow flies distance in meters between the two points.
     """
 
-    lat1 = point1[0]
-    lon1 = point1[1]
-    lat2 = point2[0]
-    lon2 = point2[1]
+    lat1 = np.deg2rad(point1[0])
+    lon1 = np.deg2rad(point1[1])
+    lat2 = np.deg2rad(point2[0])
+    lon2 = np.deg2rad(point2[1])
 
-    radius = 6378.137
+    radius = 6366.566
 
-    dlat = (lat2 * np.pi)/180. - (lat1 * np.pi)/180.
-    dlon = (lon2 * np.pi)/180. - (lon1 * np.pi)/180.
+    dlat = lat2 - lat1 
+    dlon = lon2 - lon1 
 
-    a = (np.sin(dlat/2.) * np.sin(dlat/2.)) \
-        + (np.cos((lat1 * np.pi)/180.) * np.cos((lat2 * np.pi)/180.) * np.sin(dlon/2.) * np.sin(dlon/2.))
+    a = (np.sin(dlat/2.) * np.sin(dlat/2.)) + (np.cos(lat1) * np.cos(lat2) 
+                                               * np.sin(dlon/2.) * np.sin(dlon/2.))
             
     c = 2. * np.arctan(np.sqrt(a)/np.sqrt(1-a))
         
@@ -108,3 +117,59 @@ def as_the_crow_flies_distance(point1, point2):
     distance *= 1000
         
     return distance
+
+
+def get_centroid_circle_paths(distances, centroids):
+    """Find the path for a circle of radius of the distance around each centroid.
+
+    :param distances: Numpy array of 2 dimensions with the mean as the crow flies distance
+    from all points in a cluster to the clusters centroid for each centroid in each row.
+    :param centroids: Numpy array of 3 dimensions with the first dimension
+    the time, the second the centroids for that time, and the last the GPS coords
+    of the centroid for the time and centroid.
+    
+    :return all_time_points: Numpy array of 4 dimensions with the first dimension 
+    the number of times the centroids were found for, the second dimension the 
+    number of centroids at the time, the third dimension the points for the 
+    circle with the last dimension each point in GPS coords.
+    """
+
+    all_time_points = []
+
+    for i in xrange(centroids.shape[0]):
+        
+        curr_time_points = []
+        
+        for j in xrange(centroids.shape[1]):
+            lat = centroids[i, j, 0]
+            lon = centroids[i, j, 1]
+
+            r_earth = 6366.566
+            km_dist = distances[i, j]/1000.
+
+            delta = km_dist/r_earth
+
+            points = []
+
+            # Finding the destination point given distance and bearing from start point.
+            for k in np.arange(0,360, 4):
+                theta = np.deg2rad(k)
+
+                lat_r = np.deg2rad(lat)
+                lon_r = np.deg2rad(lon)
+
+                new_lat_r = np.arcsin(np.sin(lat_r)*np.cos(delta) + np.cos(lat_r)*np.sin(delta)*np.cos(theta))
+                new_lon_r = lon_r + np.arctan2(np.sin(theta)*np.sin(delta)*np.cos(lat_r), np.cos(delta) - np.sin(lat_r)*np.sin(new_lat_r))
+
+                new_lat = np.rad2deg(new_lat_r)
+                new_lon = np.rad2deg(new_lon_r)
+
+                points.append([new_lat, new_lon])
+            
+            curr_time_points.append(points)
+
+        all_time_points.append(curr_time_points)
+
+    all_time_points = np.array(all_time_points)
+
+    return all_time_points
