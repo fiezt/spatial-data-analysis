@@ -235,7 +235,7 @@ def contour_plot(loads, gps_loc, time, N, fig_path, title,
 
     x = pixpos[:, 0, None]
     y = pixpos[:, 1, None]
-    z = loads[:, time, None]
+    z = loads[:, time, None] 
 
     fig = plt.figure(figsize=(18,16))
     ax = plt.axes(xlim=(min(pixpos[:,0])-100, max(pixpos[:,0])+100), 
@@ -255,14 +255,34 @@ def contour_plot(loads, gps_loc, time, N, fig_path, title,
     # Resizing the color bar to be size of image and adding it to the figure.
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.15)
-    cbar = plt.colorbar(cax=cax, label='Load')
-    cbar.ax.tick_params(labelsize=30) 
+    cbar = plt.colorbar(cax=cax, label='Parking Occupancy')
 
+    old_labels = cbar.ax.get_yticklabels()
+    new_labels = map(lambda label: str(int(float(label.get_text())*100)) + '%', old_labels)
+    cbar.ax.set_yticklabels(new_labels)
+
+    cbar.ax.tick_params(labelsize=30) 
     text = cbar.ax.yaxis.label
     font = matplotlib.font_manager.FontProperties(size=40)
     text.set_font_properties(font)
 
-    ax.axis('off')
+    days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
+    P = loads.shape[1]
+
+    hour = 8 + (time % (P/6))
+    if hour < 12:
+        hour = str(hour) + ':00 AM'
+    else:
+        hour = str(hour - 12) + ':00 PM'
+
+    day = time/(P/6)
+
+    ax.axes.get_xaxis().set_ticks([])
+    ax.axes.get_yaxis().set_ticks([])
+
+    ax.set_xlabel(days[day] + ' ' + hour)
+    ax.xaxis.label.set_fontsize(35)
+
     plt.tight_layout()
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
@@ -560,10 +580,11 @@ def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots.png'):
                     if b != 12 else str(b) + 'PM' for b in bins]
         ax1.set_xticklabels(x_labels)
         
-        plt.title(day_dict[i], fontsize=22)
+        plt.title(day_dict[i], fontsize=36)
+        plt.ylabel(r'Occupancy $\%$', fontsize=32)
         
-        plt.setp(ax1.get_xticklabels(), fontsize=22, rotation=60)
-        plt.setp(ax1.get_yticklabels(), fontsize=22)
+        plt.setp(ax1.get_xticklabels(), fontsize=32, rotation=60)
+        plt.setp(ax1.get_yticklabels(), fontsize=32)
         
         for tick in ax1.xaxis.get_majorticklabels():
             tick.set_horizontalalignment('left')
@@ -843,7 +864,7 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
  
 def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4, 
                    shape=None, filename='centroid_plot.png', 
-                   title='Centroids'):
+                   title=''):
     
     """Plotting the centroids from different dates at the same weekday and hour.
 
@@ -940,7 +961,7 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
         days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
 
         if num_comps == 4:
-            colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
+            colors = ['deeppink', 'lawngreen', 'blue', 'aqua']
         else:
             colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
 
@@ -948,10 +969,15 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
         scatter.set_color([colors[labels[i]] for i in range(len(labels))]) 
         scatter.set_edgecolor(['black' for i in range(len(labels))])
 
-        hour = time % (P/6)
+        hour = 8 + (time % (P/6))
         day = time/(P/6)
 
-        ax.set_xlabel(days[day] + ' ' + str(8+hour) + ':00')
+        if hour < 12:
+            hour = str(hour) + ':00 AM'
+        else:
+            hour = str(hour - 12) + ':00 PM'
+            
+        ax.set_xlabel(days[day] + ' ' + hour)
 
     fig.tight_layout()
     fig.suptitle(title, fontsize=fs)
