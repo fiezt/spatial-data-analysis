@@ -6,6 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from matplotlib.patches import Ellipse
 import os
 import numpy as np
+import figure_functions
 from map_overlay import MapOverlay
 
 
@@ -31,14 +32,13 @@ def init_animation(gps_loc, num_comps, N, fig_path):
     """
 
     # Image specs to overlay plots on.
-    upleft = [47.6197793,-122.3592749]
-    bttmright = [47.607274, -122.334786]
-    imgsize = [1135,864]
+    upleft, bttmright, imgsize, fig_name = figure_functions.setup_image()
+
 
     mp = MapOverlay(upleft, bttmright, imgsize)
 
     # Converting the gps locations to pixel positions.
-    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
+    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in range(N)])
 
     # Setting center of image.
     center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
@@ -53,14 +53,14 @@ def init_animation(gps_loc, num_comps, N, fig_path):
     ax.axes.get_xaxis().set_ticks([])
     ax.axes.get_yaxis().set_ticks([])
 
-    im = imread(os.path.join(fig_path, "belltown.png"))
+    im = imread(os.path.join(fig_path, fig_name))
     ax.imshow(im)
 
     # Adding in the midpoints of the block faces to the map as points.
-    scatter = ax.scatter(pixpos[:, 0], pixpos[:, 1], s=175, color='red', edgecolor='black')
+    scatter = ax.scatter([], [], s=175, color='red', edgecolor='black')
     
     ax.xaxis.label.set_fontsize(25)
-    ax.set_title('Gaussian Mixture Model on Average Load Distribution and Location', fontsize=25)
+    ax.set_title('Gaussian Mixture Model on Occupancy Data and Location', fontsize=25)
     
     scatter_centroid = ax.scatter([], [], s=500, color='red', edgecolor='black')
 
@@ -106,8 +106,15 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
         colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
     else:
         colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
-        
-    cluster_data = np.hstack((loads[:, time, None], gps_loc))
+
+    mask = ~np.isnan(loads[:, time])
+
+    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in range(len(gps_loc))])
+    pixpos = pixpos[mask]
+
+    scatter.set_offsets(pixpos)
+
+    cluster_data = np.hstack((loads[mask][:, time, None], gps_loc[mask]))
     cluster_data_true = cluster_data
 
     scaler = MinMaxScaler().fit(cluster_data)
@@ -152,7 +159,7 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
         for j in [1, 2]:
             
             # Converting mean in gps coords to pixel positions.
-            xy = mp.to_image_pixel_position(list(means[i,:]))
+            xy = mp.to_image_pixel_position(list(means[i, :]))
             
             # Width and height of the ellipses in gps coords.
             width = lambda_[0]*j*2
@@ -175,7 +182,7 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
             num += 1
             
     # Converting the centroids to pixel positions from gps coords.
-    means = np.array([mp.to_image_pixel_position(list(means[i,:])) for i in range(len(means))])
+    means = np.array([mp.to_image_pixel_position(list(means[i, :])) for i in range(len(means))])
     
     # Updating the centroids for the animations.
     scatter_centroid.set_offsets(means)

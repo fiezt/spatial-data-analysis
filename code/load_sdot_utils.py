@@ -97,25 +97,25 @@ def get_meter_codes(elkey, paystation_info):
     return meter_codes
 
 
-def get_supply(elkey, date, supply_info):
+def get_supply(elkey, date, block_info):
     """Get the maximum supply (# of spots) for an element key and date.
     
     :param elkey: Integer block-face element key to get the supply for.
     :param date: Datetime object in which to get the supply for.
-    :param supply_info: Dataframe containing blockface supply data.
+    :param block_info: Dataframe containing blockface supply data.
     
     :return supply: Numpy array of the supply for the block.
     """
     
-    block_supply = supply_info.loc[supply_info['ElementKey'] == elkey]
+    block_supply = block_info.loc[block_info['ElementKey'] == elkey]
 
     block_supply = block_supply[['ElementKey', 'EffectiveStartDate', 'EffectiveEndDate', 'ParkingSpaces']]
     
     block_supply.loc[:, 'EffectiveStartDate'] = pd.to_datetime(block_supply['EffectiveStartDate'])
     block_supply.loc[:, 'EffectiveEndDate'] = pd.to_datetime(block_supply['EffectiveEndDate'])
     
-    block_supply = block_supply.loc[block_supply['EffectiveStartDate'] < date]
-    block_supply = block_supply.loc[(block_supply['EffectiveEndDate'] > date) | (block_supply['EffectiveEndDate'].isnull())]
+    block_supply = block_supply.loc[block_supply['EffectiveStartDate'] <= date]
+    block_supply = block_supply.loc[(block_supply['EffectiveEndDate'] >= date) | (block_supply['EffectiveEndDate'].isnull())]
     
     supply = block_supply['ParkingSpaces'].values
     
@@ -198,7 +198,7 @@ def get_block_load(date, transactions, meter_codes, supply):
     return output
 
 
-def get_loads(month, year, subarea, paystation_info, supply_info, transactions, data_path):
+def get_loads(month, year, subarea, paystation_info, block_info, transactions, data_path):
     """Get the loads for a subarea using the paid parking transactions.
 
     Note that the transaction data will be saved in a subfolder in the path provided
@@ -209,7 +209,7 @@ def get_loads(month, year, subarea, paystation_info, supply_info, transactions, 
     :param year: Integer year to get occupancy for.
     :param subarea: String of zone to get occupancy data for.
     :param paystation_info: Dataframe containing paystation information.
-    :param supply_info: Dataframe containing blockface supply information.
+    :param block_info: Dataframe containing blockface supply information.
     :param transactions: Dataframe containing paid parking transaction data.
     :param data_path: Path to save directories containing load files in.
     """
@@ -239,7 +239,7 @@ def get_loads(month, year, subarea, paystation_info, supply_info, transactions, 
         for date in dates:
             curr_date = str(date.month) + '/' + str(date.day) + '/' + str(date.year)
 
-            supply = get_supply(key, date, supply_info)
+            supply = get_supply(key, date, block_info)
 
             if supply:
                 meter_codes = get_meter_codes(key, paystation_info)
@@ -262,11 +262,11 @@ def create_loads(subareas, months, years, file_paths, data_path, verbose=False):
     :param months: List of integer months to get loads for subareas.
     :param years: List of integer years corresponding to months to get loads for subareas.
     :param file_paths: List of file paths to paid parking transaction month data.
-    :param data_path: File path to supply_info.csv and paystation_info.csv
+    :param data_path: File path to block_info.csv and paystation_info.csv
     :param verbose: Bool indicating whether to print progress.
     """
 
-    supply_info = pd.read_csv(os.path.join(data_path, 'supply_info.csv'))
+    block_info = pd.read_csv(os.path.join(data_path, 'block_info.csv'))
     paystation_info = pd.read_csv(os.path.join(data_path, 'paystation_info.csv'))
 
     for month, year, file in zip(months, years, file_paths):
@@ -278,7 +278,7 @@ def create_loads(subareas, months, years, file_paths, data_path, verbose=False):
             if verbose:
                 print('Getting loads for month %d and year %d for subarea %s' % (month, year, subarea))
 
-            get_loads(month, year, subarea, paystation_info, supply_info, transactions, data_path)
+            get_loads(month, year, subarea, paystation_info, block_info, transactions, data_path)
 
 
 def aggregate_loads(start_hour, end_hour, minute_interval, file_paths):

@@ -9,7 +9,7 @@ import figure_functions
 import kmeans_utils
 
 
-def run_figures(loads, gps_loc, N, P, fig_path, animation_path, time, time1, time2):
+def run_figures(loads, gps_loc, N, P, fig_path, animation_path, time):
     """Create the visualizations of the spatial characteristics of the parking data.
 
     :param loads: Numpy array with each row containing the load for a day of 
@@ -21,20 +21,14 @@ def run_figures(loads, gps_loc, N, P, fig_path, animation_path, time, time1, tim
     :param fig_path: File path to save figures to.
     :param animation_path: File path to save mixture animation to.
     :param time: Integer index of column to use from loads for majority of plots.
-    :param time1: Integer index of column index to use for mixture and contour plots.
-    :param time2: Integer index of column index to use for mixture and contour plots.
     """
 
     figure_functions.model_selection(loads, gps_loc, P, fig_path)
     figure_functions.create_animation(loads, gps_loc, N, P, fig_path, animation_path)
     
     fig, ax = figure_functions.mixture_plot(loads=loads, gps_loc=gps_loc, 
-                                            times=[time1], N=N, fig_path=fig_path, 
-                                            shape=(1,1), filename='mixture1.png',
-                                            title='')
-    fig, ax = figure_functions.mixture_plot(loads=loads, gps_loc=gps_loc, 
-                                            times=[time2], N=N, fig_path=fig_path, 
-                                            shape=(1,1), filename='mixture2.png',
+                                            times=[time], N=N, fig_path=fig_path, 
+                                            shape=(1,1), filename='mixture.png',
                                             title='')
 
     fig, ax = figure_functions.surface_plot(loads=loads, gps_loc=gps_loc, time=time, 
@@ -46,14 +40,9 @@ def run_figures(loads, gps_loc, N, P, fig_path, animation_path, time, time1, tim
     fig, ax = figure_functions.triangular_grid(loads=loads, gps_loc=gps_loc, time=time,
                                                N=N, fig_path=fig_path)
 
-    fig, ax = figure_functions.contour_plot(loads=loads, gps_loc=gps_loc, time=time1,
+    fig, ax = figure_functions.contour_plot(loads=loads, gps_loc=gps_loc, time=time,
                                             title='', 
-                                            N=N, filename='contour1.png', fig_path=fig_path, 
-                                            contours=10)
-
-    fig, ax = figure_functions.contour_plot(loads=loads, gps_loc=gps_loc, time=time2,
-                                            title='', 
-                                            N=N, filename='contour2.png', fig_path=fig_path, 
+                                            N=N, filename='contour.png', fig_path=fig_path, 
                                             contours=10)
 
     fig, ax = figure_functions.voronoi(gps_loc=gps_loc, N=N, fig_path=fig_path)

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.mlab as ml
 import matplotlib.pyplot as plt
 import matplotlib
@@ -8,6 +9,8 @@ from matplotlib import animation
 from matplotlib.colors import LightSource
 from mpl_toolkits.mplot3d import Axes3D
 import os
+import pickle
+import gmplot
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
 from sklearn import mixture
@@ -22,6 +25,12 @@ from scipy.spatial import Voronoi
 from map_overlay import MapOverlay
 
 
+background_up_left = [47.6197793, -122.3592749]
+background_bottom_right = [47.607274, -122.334786]
+background_img_size = [1135, 864]
+background_fig_name = 'belltown.png'
+
+
 def setup_image():
     """Specifying parameters of image to overlay plots on.
 
@@ -31,13 +40,91 @@ def setup_image():
     """
 
     # GPS coordinates at corners of figure that will be used as the background.
-    upleft = [47.6197793,-122.3592749]
-    bttmright = [47.607274, -122.334786]
+    upleft = background_up_left
+    bttmright = background_bottom_right
 
     # Figure size of background that will be used.
-    imgsize = [1135,864]
+    imgsize = background_img_size
 
-    return upleft, bttmright, imgsize
+    fig_name = background_fig_name
+
+    return upleft, bttmright, imgsize, fig_name
+
+
+def plot_neighborhoods(key_lists, data_path, fig_path, filename='neighborhood_map.html'):
+    """Plotting on google maps the paid parking blockfaces for each neighborhood given.
+    
+    :param key_lists: List of lists, with each inner list containing the blockface keys to draw.
+    :param data_path: File path to the block_info spread sheet.
+    :param fig_path: Path to save the html file of blockfaces drawn on the map.
+    :param filename: Name to save file of the map, must end in .html.
+    """
+    
+    with open(os.path.join(data_path, 'blockface_locs.p'), 'rb') as f:
+        locations = pickle.load(f)
+
+    gmap = gmplot.GoogleMapPlotter(47.612676, -122.345028, 15)
+
+    colors = iter(['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'])
+
+    for subarea in key_lists:
+        
+        color_choice = next(colors)
+
+        for key in subarea:
+            if key in locations:
+                curr_block = locations[key]
+
+                lat1, lat2 = curr_block[1], curr_block[-2]
+                lon1, lon2 = curr_block[0], curr_block[-3]
+
+                gmap.plot([lat1, lat2], [lon1, lon2], color=color_choice, edge_width=4)
+            else:
+                continue
+                
+    gmap.draw(os.path.join(fig_path, filename))
+
+
+def plot_paid_areas(key_lists, data_path, fig_path, filename='paidarea_map.html'):
+    """Plotting on google maps the paid parking blockfaces for each paid area.
+    
+    :param key_lists: List of lists, with each inner list containing the blockface keys to draw.
+    :param data_path: File path to the block_info spread sheet.
+    :param fig_path: Path to save the html file of blockfaces drawn on the map.
+    :param filename: Name to save file of the map, must end in .html.
+    """
+    
+    with open(os.path.join(data_path, 'blockface_locs.p'), 'rb') as f:
+        locations = pickle.load(f)
+
+    gmap = gmplot.GoogleMapPlotter(47.612676, -122.345028, 15)
+    
+    area_info = pd.read_csv(os.path.join(data_path, 'paystation_info.csv'))
+    area_info = area_info[['ELMNTKEY', 'PAIDAREA', 'SUBAREA']]
+
+    colors = iter(['b', 'g', 'r', 'm', 'k', 'lightcoral', 'deeppink', 'orangered', 
+                   'orange', 'skyblue', 'springgreen', 'chartreuse', 'darkcyan'])
+    
+    area_dict = {}
+
+    for subarea in key_lists:
+        for key in subarea:
+            if key in locations:
+                curr_block = locations[key]
+
+                lat1, lat2 = curr_block[1], curr_block[-2]
+                lon1, lon2 = curr_block[0], curr_block[-3]
+                
+                area = area_info.loc[area_info['ELMNTKEY'] == key]['SUBAREA'].unique().tolist()[0]
+                
+                if area not in area_dict:
+                    area_dict[area] = next(colors)
+
+                gmap.plot([lat1, lat2], [lon1, lon2], color=area_dict[area], edge_width=4)
+            else:
+                continue
+                
+    gmap.draw(os.path.join(fig_path, filename))
 
 
 def surface_plot(loads, gps_loc, time, fig_path, filename='surface.png'):
@@ -53,6 +140,10 @@ def surface_plot(loads, gps_loc, time, fig_path, filename='surface.png'):
 
     :return fig, ax: Matplotlib figure and axes objects.
     """
+
+    mask = ~np.isnan(loads[:, time])
+    gps_loc = gps_loc[mask]
+    loads = loads[mask]
 
     x = gps_loc[:, 1, None]
     y = gps_loc[:, 0, None]
@@ -84,7 +175,6 @@ def surface_plot(loads, gps_loc, time, fig_path, filename='surface.png'):
 
     ax.set_xlabel('Latitude' )
     ax.set_ylabel('Longitude')
-    ax.set_title('Geospatial Load')
 
     ax.invert_xaxis()
     ax.invert_yaxis()
@@ -110,12 +200,25 @@ def interpolation(loads, gps_loc, time, N, fig_path, filename='interpolation.png
     :return fig, ax: Matplotlib figure and axes objects.
     """
 
-    upleft, bttmright, imgsize = setup_image()
+    upleft, bttmright, imgsize, fig_name = setup_image()
 
     mp = MapOverlay(upleft, bttmright, imgsize)
 
     # Translating GPS coordinates to pixel positions.
-    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
+    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in range(N)])
+
+    fig = plt.figure(figsize=(18,16))
+    ax = plt.axes(xlim=(min(pixpos[:,0])-100, max(pixpos[:,0])+100), 
+                  ylim=(min(pixpos[:,1])-100, max(pixpos[:,1])+100))
+
+    # Plotting background image of the map.
+    im = imread(os.path.join(fig_path, fig_name))
+    ax.imshow(im)
+    ax.invert_yaxis()
+
+    mask = ~np.isnan(loads[:, time])
+    pixpos = pixpos[mask]
+    loads = loads[mask]
 
     x = pixpos[:, 0, None]
     y = pixpos[:, 1, None]
@@ -127,15 +230,6 @@ def interpolation(loads, gps_loc, time, N, fig_path, filename='interpolation.png
     X, Y = np.meshgrid(xi, yi)
     Z = ml.griddata(x[:, 0], y[:, 0], z[:, 0], xi, yi)
 
-    fig = plt.figure(figsize=(18,16))
-    ax = plt.axes(xlim=(min(pixpos[:,0])-100, max(pixpos[:,0])+100), 
-                  ylim=(min(pixpos[:,1])-100, max(pixpos[:,1])+100))
-
-    # Plotting background image of the map.
-    im = imread(os.path.join(fig_path, 'belltown.png'))
-    ax.imshow(im)
-    ax.invert_yaxis()
-
     # Interpolating between the block locations to create continuous heat map.
     plt.pcolormesh(xi, yi, Z, vmin=z.min(), vmax=z.max(), cmap='jet')
     plt.scatter(x, y, c=z, s=200, edgecolor='black', vmin=z.min(), vmax=z.max(), cmap='jet')
@@ -143,10 +237,36 @@ def interpolation(loads, gps_loc, time, N, fig_path, filename='interpolation.png
     # Resizing the color bar to be size of image and adding it to the figure.
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.15)
-    cbar = plt.colorbar(cax=cax, cmap='jet')
-    cbar.ax.tick_params(labelsize=24) 
+    cbar = plt.colorbar(cax=cax, cmap='jet', label='Parking Occupancy')
 
-    ax.axis('off')
+    old_labels = cbar.ax.get_yticklabels()
+    new_labels = map(lambda label: str(int(float(label.get_text())*100)) + '%', old_labels)
+    cbar.ax.set_yticklabels(new_labels)
+
+    cbar.ax.tick_params(labelsize=30) 
+    text = cbar.ax.yaxis.label
+    font = matplotlib.font_manager.FontProperties(size=40)
+    text.set_font_properties(font)
+
+    days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
+    P = loads.shape[1]
+
+    hour = 8 + (time % (P/6))
+    if hour < 12:
+        hour = str(hour) + ':00 AM'
+    elif hour == 12:
+        hour = str(hour) + ':00 PM'
+    else:
+        hour = str(hour - 12) + ':00 PM'
+
+    day = time/(P/6)
+
+    ax.axes.get_xaxis().set_ticks([])
+    ax.axes.get_yaxis().set_ticks([])
+
+    ax.set_xlabel(days[day] + ' ' + hour)
+    ax.xaxis.label.set_fontsize(35)
+
     plt.tight_layout()
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
@@ -169,26 +289,30 @@ def triangular_grid(loads, gps_loc, time, N, fig_path, filename='triangle.png'):
     :return fig, ax: Matplotlib figure and axes objects.
     """
 
-    upleft, bttmright, imgsize = setup_image()
+    upleft, bttmright, imgsize, fig_name = setup_image()
 
     mp = MapOverlay(upleft, bttmright, imgsize)
 
     # Translating GPS coordinates to pixel positions.
     pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
 
-    x = pixpos[:, 0, None]
-    y = pixpos[:, 1, None]
-    z = loads[:, time, None]
-
     fig = plt.figure(figsize=(18,16))
     ax = plt.axes(xlim=(min(pixpos[:,0])-100, max(pixpos[:,0])+100), 
                   ylim=(min(pixpos[:,1])-100, max(pixpos[:,1])+100))
 
     # Plotting background image of the map.
-    im = imread(os.path.join(fig_path, 'belltown.png'))
+    im = imread(os.path.join(fig_path, fig_name))
     ax.imshow(im)
 
     ax.invert_yaxis()
+
+    mask = ~np.isnan(loads[:, time])
+    pixpos = pixpos[mask]
+    loads = loads[mask]
+
+    x = pixpos[:, 0, None]
+    y = pixpos[:, 1, None]
+    z = loads[:, time, None]
 
     # Creating unstructured triangle graph.
     ax.tripcolor(x[:, 0], y[:, 0], z[:, 0], edgecolor='black', vmin=z.min(), vmax=z.max(), cmap='jet') 
@@ -197,10 +321,36 @@ def triangular_grid(loads, gps_loc, time, N, fig_path, filename='triangle.png'):
     # Resizing the color bar to be size of image and adding it to the figure.
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.15)
-    cbar = plt.colorbar(cax=cax)
-    cbar.ax.tick_params(labelsize=24) 
+    cbar = plt.colorbar(cax=cax, cmap='jet', label='Parking Occupancy')
 
-    ax.axis('off')
+    old_labels = cbar.ax.get_yticklabels()
+    new_labels = map(lambda label: str(int(float(label.get_text())*100)) + '%', old_labels)
+    cbar.ax.set_yticklabels(new_labels)
+
+    cbar.ax.tick_params(labelsize=30) 
+    text = cbar.ax.yaxis.label
+    font = matplotlib.font_manager.FontProperties(size=40)
+    text.set_font_properties(font)
+
+    days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
+    P = loads.shape[1]
+
+    hour = 8 + (time % (P/6))
+    if hour < 12:
+        hour = str(hour) + ':00 AM'
+    elif hour == 12:
+        hour = str(hour) + ':00 PM'
+    else:
+        hour = str(hour - 12) + ':00 PM'
+
+    day = time/(P/6)
+
+    ax.axes.get_xaxis().set_ticks([])
+    ax.axes.get_yaxis().set_ticks([])
+
+    ax.set_xlabel(days[day] + ' ' + hour)
+    ax.xaxis.label.set_fontsize(35)
+
     plt.tight_layout()
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
@@ -226,27 +376,31 @@ def contour_plot(loads, gps_loc, time, N, fig_path, title,
     :return fig, ax: Matplotlib figure and axes objects.
     """
 
-    upleft, bttmright, imgsize = setup_image()
+    upleft, bttmright, imgsize, fig_name = setup_image()
 
     mp = MapOverlay(upleft, bttmright, imgsize)
 
     # Translating GPS coordinates to pixel positions.
     pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
 
-    x = pixpos[:, 0, None]
-    y = pixpos[:, 1, None]
-    z = loads[:, time, None] 
-
     fig = plt.figure(figsize=(18,16))
     ax = plt.axes(xlim=(min(pixpos[:,0])-100, max(pixpos[:,0])+100), 
                   ylim=(min(pixpos[:,1])-100, max(pixpos[:,1])+100))
 
     # Plotting background image of the map.
-    im = imread(os.path.join(fig_path, 'belltown.png'))
+    im = imread(os.path.join(fig_path, fig_name))
     ax.imshow(im)
     ax.set_title(title, fontsize=40)
 
     ax.invert_yaxis()
+
+    mask = ~np.isnan(loads[:, time])
+    pixpos = pixpos[mask]
+    loads = loads[mask]
+
+    x = pixpos[:, 0, None]
+    y = pixpos[:, 1, None]
+    z = loads[:, time, None] 
 
     # Creating contour map with the last argument the level of contours.
     ax.tricontourf(x[:, 0], y[:, 0], z[:, 0], contours, vmin=z.min(), vmax=z.max(), cmap='jet') 
@@ -272,6 +426,8 @@ def contour_plot(loads, gps_loc, time, N, fig_path, title,
     hour = 8 + (time % (P/6))
     if hour < 12:
         hour = str(hour) + ':00 AM'
+    elif hour == 12:
+        hour = str(hour) + ':00 PM'
     else:
         hour = str(hour - 12) + ':00 PM'
 
@@ -419,10 +575,14 @@ def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogene
     :return fig, ax: Matplotlib figure and axes objects.
     """
 
+    mask = ~np.isnan(loads[:, time])
+    loads = loads[mask]
+
+    N = len(loads)
     bins = range(N)
 
     # Getting the load data for a specific time to plot for each block key.
-    counts = loads[:, time]
+    counts = loads[:, time] * 100
 
     sns.set()
     sns.set_style("whitegrid")
@@ -440,9 +600,9 @@ def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogene
     plt.bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
     plt.xlim([0, N])
 
-    plt.title('Spatial Heterogeneity', fontsize=22)
-    plt.xlabel('Blockface Key', fontsize=22)
-    plt.ylabel('Load', fontsize=22)
+    plt.title('Block-Face Occupancies', fontsize=22)
+    plt.xlabel('Block-Faces', fontsize=22)
+    plt.ylabel(r'Occupancy $\%$', fontsize=22)
 
     plt.tight_layout()
 
@@ -454,7 +614,7 @@ def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogene
 
 
 def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heterogeneity.png'):
-    """Plot average load across belltown at each time and hour combination
+    """Plot average load across at each time and hour combination
     to demonstrate temporal heterogeneity. 
 
     :param loads: Numpy array with each row containing the load for a day of 
@@ -470,7 +630,7 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
     bins = range(P)
 
     # Getting the mean load over all locations at each time for the plot.
-    counts = np.mean(loads, axis=0)
+    counts = np.nanmean(loads, axis=0) * 100
 
     sns.set()
     sns.set_style("whitegrid")
@@ -499,16 +659,16 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
         ax.axvline(x=50, color='black')
         ax.axvline(x=60, color='black')
 
-        plt.title('Temporal Heterogeneity', fontsize=22)
-        plt.ylabel('Load', fontsize=22)
+        plt.title('Daily Occupancy Profiles', fontsize=22)
+        plt.ylabel(r'Occupancy $\%$', fontsize=22)
 
         # Labels of the day of the week for each portion of the plot.
-        ax.annotate('Monday',xy=(1.7,-.05),xytext=(1.7,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Tuesday',xy=(11.7,-.05),xytext=(11.7,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Wednesday',xy=(20.35,-.05),xytext=(20.35,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Thursday',xy=(31.6,-.05),xytext=(31.6,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Friday',xy=(42.8,-.05),xytext=(42.8,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Saturday',xy=(51.6,-.05),xytext=(51.6,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Monday',xy=(1.7,-5),xytext=(1.7,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Tuesday',xy=(11.7,-5),xytext=(11.7,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Wednesday',xy=(20.35,-5),xytext=(20.35,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Thursday',xy=(31.6,-5),xytext=(31.6,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Friday',xy=(42.8,-5),xytext=(42.8,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Saturday',xy=(51.6,-5),xytext=(51.6,-5), annotation_clip=False, fontsize=16)
 
     # 12 hour days.
     elif P == 72:
@@ -521,16 +681,16 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
         ax.axvline(x=60, color='black')
         ax.axvline(x=72, color='black')
 
-        plt.title('Temporal Heterogeneity', fontsize=22)
-        plt.ylabel('Load', fontsize=22)
+        plt.title('Daily Occupancy Profiles', fontsize=22)
+        plt.ylabel(r'Occupancy $\%$', fontsize=22)
 
         # Labels of the day of the week for each portion of the plot.
-        ax.annotate('Monday', xy=(2,-.05), xytext=(2,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Tuesday', xy=(14,-.05), xytext=(14,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Wednesday', xy=(24.5,-.05), xytext=(24.5,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Thursday', xy=(38,-.05), xytext=(38,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Friday', xy=(51,-.05), xytext=(51,-.05), annotation_clip=False, fontsize=16)
-        ax.annotate('Saturday', xy=(62,-.05), xytext=(62,-.05), annotation_clip=False, fontsize=16)
+        ax.annotate('Monday', xy=(2,-5), xytext=(2,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Tuesday', xy=(14,-5), xytext=(14,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Wednesday', xy=(24.5,-5), xytext=(24.5,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Thursday', xy=(38,-5), xytext=(38,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Friday', xy=(51,-5), xytext=(51,-5), annotation_clip=False, fontsize=16)
+        ax.annotate('Saturday', xy=(62,-5), xytext=(62,-5), annotation_clip=False, fontsize=16)
 
     plt.tight_layout()
 
@@ -571,9 +731,9 @@ def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots.png'):
         bins = range(8, (P/6) + 8)
 
         # Getting the mean loads for the indexes corresponding to the hours of the given day.
-        counts = loads.mean(axis=0)[day]
+        counts = np.nanmean(loads, axis=0)[day] * 100
 
-        ax1 = plt.subplot(1,6,i)
+        ax1 = plt.subplot(1, 6, i)
         
         ax1.set_xticks(np.arange(min(bins), max(bins)+1, 1))
         x_labels = [str(b) + 'AM' if b < 12 else str(b-12) + 'PM' 
@@ -583,18 +743,21 @@ def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots.png'):
         plt.title(day_dict[i], fontsize=36)
         plt.ylabel(r'Occupancy $\%$', fontsize=32)
         
-        plt.setp(ax1.get_xticklabels(), fontsize=32, rotation=60)
-        plt.setp(ax1.get_yticklabels(), fontsize=32)
+        plt.setp(ax1.get_xticklabels(), fontsize=28, rotation=60)
+        plt.setp(ax1.get_yticklabels(), fontsize=28)
         
         for tick in ax1.xaxis.get_majorticklabels():
             tick.set_horizontalalignment('left')
         
         plt.bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
         plt.xlim([min(bins), max(bins)+1])
+        plt.ylim([0, 110])
         
         i += 1
 
     sns.reset_orig()
+
+    plt.tight_layout()
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
 
@@ -620,7 +783,7 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots.png'):
 
     nrows = 2
     ncols = (loads.shape[1]/6)/2
-    fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=(6*ncols, 21))
+    fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7*ncols, 21))
 
     P = loads.shape[1]
 
@@ -632,7 +795,7 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots.png'):
         bins = range(6)
 
         # Getting the mean loads for the indexes corresponding to the days of the given hour.
-        counts = loads.mean(axis=0)[hour]
+        counts = np.nanmean(loads, axis=0)[hour] * 100
         
         ax1 = plt.subplot(nrows, ncols, i)
         ax1.set_xticks(np.arange(min(bins), max(bins)+1, 1))
@@ -647,13 +810,18 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots.png'):
         elif i + 7 > 12:
             title = str(7+i-12) + ':00 PM'
             
-        plt.title(title, fontsize=22)
+        plt.ylabel(r'Occupancy $\%$', fontsize=24)
+        plt.title(title, fontsize=24)
         
         plt.bar(bins, counts, color='red', align='center')
+
+        plt.ylim([0, 110])
         
         i += 1
         
     sns.reset_orig()
+
+    plt.tight_layout()
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
 
@@ -695,12 +863,12 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
     long of a centroid of the GMM.
     """
     
-    upleft, bttmright, imgsize = setup_image()
+    upleft, bttmright, imgsize, fig_name = setup_image()
 
     mp = MapOverlay(upleft, bttmright, imgsize)
 
     # Converting the gps locations to pixel positions.
-    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
+    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in range(N)])
 
     # Setting center of image.
     center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
@@ -729,8 +897,8 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
         else:
             ax = fig.add_subplot(shape[0], shape[1], fig_count)
             
-        ax.set_xlim((min(pixpos[:,0])-100, max(pixpos[:,0])+100))
-        ax.set_ylim((min(pixpos[:,1])-100, max(pixpos[:,1])+100))
+        ax.set_xlim((min(pixpos[:, 0]) - 100, max(pixpos[:, 0]) + 100))
+        ax.set_ylim((min(pixpos[:, 1]) - 100, max(pixpos[:, 1]) + 100))
         
         if isinstance(times, list):
             time = times[fig_count-1]
@@ -742,11 +910,14 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
         ax.axes.get_xaxis().set_ticks([])
         ax.axes.get_yaxis().set_ticks([])
 
-        im = imread(os.path.join(fig_path, "belltown.png"))
+        im = imread(os.path.join(fig_path, fig_name))
         ax.imshow(im)
 
+        mask = ~np.isnan(loads[:, time])
+        pixpos_time = pixpos[mask]
+
         # Adding in the midpoints of the block faces to the map as points.
-        scatter = ax.scatter(pixpos[:, 0], pixpos[:, 1], s=175, color='red', edgecolor='black')
+        scatter = ax.scatter(pixpos_time[:, 0], pixpos_time[:, 1], s=175, color='red', edgecolor='black')
 
         ax.xaxis.label.set_fontsize(fs_x)
 
@@ -763,8 +934,8 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
             colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
         else:
             colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
-
-        cluster_data = np.hstack((loads[:, time, None], gps_loc))
+        
+        cluster_data = np.hstack((loads[mask][:, time, None], gps_loc[mask]))
 
         scaler = MinMaxScaler().fit(cluster_data)
         cluster_data = scaler.transform(cluster_data)
@@ -811,14 +982,14 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
             for j in [1, 2]:
 
                 # Converting mean in gps coords to pixel positions.
-                xy = mp.to_image_pixel_position(list(means[i,:]))
+                xy = mp.to_image_pixel_position(list(means[i, :]))
 
                 # Width and height of the ellipses in gps coords.
                 width = lambda_[0]*j*2
                 height = lambda_[1]*j*2 
 
                 # Center of the ellipse in pixel positions.
-                new_center = (center[0]+width, center[1]+height)
+                new_center = (center[0] + width, center[1] + height)
                 new_center = mp.to_image_pixel_position(list(new_center))
 
                 # New width and height of the ellipses in pixel positions.
@@ -834,7 +1005,7 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
                 num += 1
 
         # Converting the centroids to pixel positions from gps coords.
-        pix_means = np.array([mp.to_image_pixel_position(list(means[i,:])) for i in range(len(means))])
+        pix_means = np.array([mp.to_image_pixel_position(list(means[i, :])) for i in range(len(means))])
 
         # Updating the centroids for the animations.
         scatter_centroid.set_offsets(pix_means)
@@ -842,6 +1013,8 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
         hour = 8 + (time % (P/6))
         if hour < 12:
             hour = str(hour) + ':00 AM'
+        elif hour == 12:
+            hour = str(hour) + ':00 PM'
         else:
             hour = str(hour - 12) + ':00 PM'
 
@@ -895,7 +1068,7 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
     :return fig, ax: Matplotlib figure and axes objects.
     """
 
-    upleft, bttmright, imgsize = setup_image()
+    upleft, bttmright, imgsize, fig_name = setup_image()
 
     mp = MapOverlay(upleft, bttmright, imgsize)
 
@@ -942,7 +1115,7 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
         ax.axes.get_xaxis().set_ticks([])
         ax.axes.get_yaxis().set_ticks([])
 
-        im = imread(os.path.join(fig_path, "belltown.png"))
+        im = imread(os.path.join(fig_path, fig_name))
         ax.imshow(im)
 
         # Clustering the centroids.
@@ -974,6 +1147,8 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
 
         if hour < 12:
             hour = str(hour) + ':00 AM'
+        elif hour == 12:
+            hour = str(hour) + ':00 PM'
         else:
             hour = str(hour - 12) + ':00 PM'
             
@@ -1021,7 +1196,7 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
     :return fig, ax: Matplotlib figure and axes objects.
     """
 
-    upleft, bttmright, imgsize = setup_image()
+    upleft, bttmright, imgsize, fig_name = setup_image()
 
     mp = MapOverlay(upleft, bttmright, imgsize)
 
@@ -1070,7 +1245,7 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
         ax.axes.get_xaxis().set_ticks([])
         ax.axes.get_yaxis().set_ticks([])
 
-        im = imread(os.path.join(fig_path, "belltown.png"))
+        im = imread(os.path.join(fig_path, fig_name))
         ax.imshow(im)
 
         ax.xaxis.label.set_fontsize(fs_x)
@@ -1097,6 +1272,8 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
         hour = 8 + (time % (P/6))
         if hour < 12:
             hour = str(hour) + ':00 AM'
+        elif hour == 12:
+            hour = str(hour) + ':00 PM'
         else:
             hour = str(hour - 12) + ':00 PM'
 
@@ -1146,7 +1323,8 @@ def model_selection(loads, gps_loc, P, fig_path):
 
         # Varying the number of components and getting AIC, BIC, and likelihood.
         for num_comps in range(min_comps, max_comps):
-            cluster_data = np.hstack((loads[:, time, None], gps_loc))
+            cluster_data = np.hstack((loads[~np.isnan(loads[:, time])][:, time, None], 
+                                      gps_loc[~np.isnan(loads[:, time])]))
 
             scaler = MinMaxScaler().fit(cluster_data)
             cluster_data = scaler.transform(cluster_data)
