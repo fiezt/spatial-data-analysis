@@ -107,7 +107,7 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
     else:
         colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
 
-    mask = ~np.isnan(loads[:, time])
+    mask = ((~np.isnan(loads[:, time])) & (~(loads[:, time] <= 0.05)))
 
     pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in range(len(gps_loc))])
     pixpos = pixpos[mask]
@@ -115,7 +115,6 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
     scatter.set_offsets(pixpos)
 
     cluster_data = np.hstack((loads[mask][:, time, None], gps_loc[mask]))
-    cluster_data_true = cluster_data
 
     scaler = MinMaxScaler().fit(cluster_data)
     cluster_data = scaler.transform(cluster_data)
@@ -129,20 +128,23 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
     
     labels = gmm.predict(cluster_data)    
 
-    color_codes = {}
-    for i in range(num_comps):
-        
-        # Finding the default centroid closest to the current centroid.
-        dists = [(j, np.linalg.norm(means[i] - default_means[j])) for j in range(num_comps)]
-        best_colors = sorted(dists, key=lambda item:item[1])
-        
-        # Finding the color that is unused that is closest to the current centroid.
-        unused_colors = [color[0] for color in best_colors if color[0] 
-                         not in color_codes.values()]
-        
-        # Choosing the closest centroid that is not already used.
-        choice = unused_colors[0]
-        color_codes[i] = choice
+    if num_comps == 4:
+        color_codes = {}
+        for i in range(num_comps):
+
+            # Finding the default centroid closest to the current centroid.
+            dists = [(j, np.linalg.norm(means[i] - default_means[j])) for j in range(num_comps)]
+            best_colors = sorted(dists, key=lambda item:item[1])
+
+            # Finding the color that is unused that is closest to the current centroid.
+            unused_colors = [color[0] for color in best_colors if color[0] 
+                             not in color_codes.values()]
+
+            # Choosing the closest centroid that is not already used.
+            choice = unused_colors[0]
+            color_codes[i] = choice
+    else:
+        color_codes = {i:i for i in range(num_comps)}
     
     # Setting the cluster colors to keep the colors the same each iteration.
     scatter.set_color([colors[color_codes[labels[i]]] for i in range(len(labels))]) 

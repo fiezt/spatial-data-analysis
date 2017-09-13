@@ -30,6 +30,16 @@ background_bottom_right = [47.607274, -122.334786]
 background_img_size = [1135, 864]
 background_fig_name = 'belltown.png'
 
+# background_up_left = [47.619266, -122.358031]
+# background_bottom_right = [47.601475, -122.311733]
+# background_img_size = [888, 502]
+# background_fig_name = 'seattle.png'
+
+# background_up_left = [47.618721, -122.357463]
+# background_bottom_right = [47.601608, -122.312430]
+# background_img_size = [1769, 996]
+# background_fig_name = 'seattle2.png'
+
 
 def setup_image():
     """Specifying parameters of image to overlay plots on.
@@ -51,7 +61,7 @@ def setup_image():
     return upleft, bttmright, imgsize, fig_name
 
 
-def plot_neighborhoods(key_lists, data_path, fig_path, filename='neighborhood_map.html'):
+def plot_neighborhoods(element_keys, data_path, fig_path, filename='neighborhood_map.html'):
     """Plotting on google maps the paid parking blockfaces for each neighborhood given.
     
     :param key_lists: List of lists, with each inner list containing the blockface keys to draw.
@@ -65,27 +75,36 @@ def plot_neighborhoods(key_lists, data_path, fig_path, filename='neighborhood_ma
 
     gmap = gmplot.GoogleMapPlotter(47.612676, -122.345028, 15)
 
-    colors = iter(['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'])
+    area_info = pd.read_csv(os.path.join(data_path, 'paystation_info.csv'))
+    area_info = area_info[['ELMNTKEY', 'PAIDAREA', 'SUBAREA']]
 
-    for subarea in key_lists:
-        
-        color_choice = next(colors)
+    colors = iter(['b', 'g', 'r', 'm', 'k', 'orange', 'deepskyblue', 
+                   'purple', 'firebrick', 'darkcyan', 'gold', 'limegreen', 'gray'])
 
-        for key in subarea:
-            if key in locations:
-                curr_block = locations[key]
+    all_keys = area_info['ELMNTKEY'].unique().tolist()
 
-                lat1, lat2 = curr_block[1], curr_block[-2]
-                lon1, lon2 = curr_block[0], curr_block[-3]
+    area_dict = {}
 
-                gmap.plot([lat1, lat2], [lon1, lon2], color=color_choice, edge_width=4)
-            else:
-                continue
+    for key in element_keys:
+        if key in locations and key in all_keys:
+            curr_block = locations[key]
+
+            lat1, lat2 = curr_block[1], curr_block[-2]
+            lon1, lon2 = curr_block[0], curr_block[-3]
+
+            area = area_info.loc[area_info['ELMNTKEY'] == key]['PAIDAREA'].unique().tolist()[0]
+
+            if area not in area_dict:
+                area_dict[area] = next(colors)
+
+            gmap.plot([lat1, lat2], [lon1, lon2], color=area_dict[area], edge_width=4)
+        else:
+            continue
                 
     gmap.draw(os.path.join(fig_path, filename))
 
 
-def plot_paid_areas(key_lists, data_path, fig_path, filename='paidarea_map.html'):
+def plot_paid_areas(element_keys, data_path, fig_path, filename='paidarea_map.html'):
     """Plotting on google maps the paid parking blockfaces for each paid area.
     
     :param key_lists: List of lists, with each inner list containing the blockface keys to draw.
@@ -102,27 +121,30 @@ def plot_paid_areas(key_lists, data_path, fig_path, filename='paidarea_map.html'
     area_info = pd.read_csv(os.path.join(data_path, 'paystation_info.csv'))
     area_info = area_info[['ELMNTKEY', 'PAIDAREA', 'SUBAREA']]
 
-    colors = iter(['b', 'g', 'r', 'm', 'k', 'lightcoral', 'deeppink', 'orangered', 
-                   'orange', 'skyblue', 'springgreen', 'chartreuse', 'darkcyan'])
+    colors = iter(['b', 'g', 'r', 'm', 'k', 'orange', 'deepskyblue', 
+                   'purple', 'firebrick', 'darkcyan', 'gold', 'limegreen', 'gray'])
+
+    all_keys = area_info['ELMNTKEY'].unique().tolist()
     
     area_dict = {}
 
-    for subarea in key_lists:
-        for key in subarea:
-            if key in locations:
-                curr_block = locations[key]
+    for key in element_keys:
+        if key in locations and key in all_keys:
+            curr_block = locations[key]
 
-                lat1, lat2 = curr_block[1], curr_block[-2]
-                lon1, lon2 = curr_block[0], curr_block[-3]
-                
-                area = area_info.loc[area_info['ELMNTKEY'] == key]['SUBAREA'].unique().tolist()[0]
-                
-                if area not in area_dict:
-                    area_dict[area] = next(colors)
+            lat1, lat2 = curr_block[1], curr_block[-2]
+            lon1, lon2 = curr_block[0], curr_block[-3]
+            
+            neighborhood = area_info.loc[area_info['ELMNTKEY'] == key]['PAIDAREA'].unique().tolist()[0]
+            subarea = area_info.loc[area_info['ELMNTKEY'] == key]['SUBAREA'].unique().tolist()[0]
+            area = (neighborhood, subarea) 
 
-                gmap.plot([lat1, lat2], [lon1, lon2], color=area_dict[area], edge_width=4)
-            else:
-                continue
+            if area not in area_dict:
+                area_dict[area] = next(colors)
+
+            gmap.plot([lat1, lat2], [lon1, lon2], color=area_dict[area], edge_width=4)
+        else:
+            continue
                 
     gmap.draw(os.path.join(fig_path, filename))
 
@@ -141,7 +163,7 @@ def surface_plot(loads, gps_loc, time, fig_path, filename='surface.png'):
     :return fig, ax: Matplotlib figure and axes objects.
     """
 
-    mask = ~np.isnan(loads[:, time])
+    mask = ((~np.isnan(loads[:, time])) & (~(loads[:, time] <= 0.05)))
     gps_loc = gps_loc[mask]
     loads = loads[mask]
 
@@ -216,7 +238,7 @@ def interpolation(loads, gps_loc, time, N, fig_path, filename='interpolation.png
     ax.imshow(im)
     ax.invert_yaxis()
 
-    mask = ~np.isnan(loads[:, time])
+    mask = ((~np.isnan(loads[:, time])) & (~(loads[:, time] <= 0.05)))
     pixpos = pixpos[mask]
     loads = loads[mask]
 
@@ -306,7 +328,7 @@ def triangular_grid(loads, gps_loc, time, N, fig_path, filename='triangle.png'):
 
     ax.invert_yaxis()
 
-    mask = ~np.isnan(loads[:, time])
+    mask = ((~np.isnan(loads[:, time])) & (~(loads[:, time] <= 0.05)))
     pixpos = pixpos[mask]
     loads = loads[mask]
 
@@ -394,7 +416,7 @@ def contour_plot(loads, gps_loc, time, N, fig_path, title,
 
     ax.invert_yaxis()
 
-    mask = ~np.isnan(loads[:, time])
+    mask = ((~np.isnan(loads[:, time])) & (~(loads[:, time] <= 0.05)))
     pixpos = pixpos[mask]
     loads = loads[mask]
 
@@ -458,7 +480,7 @@ def voronoi(gps_loc, N, fig_path, filename='voronoi.png'):
     :return fig, ax: Matplotlib figure and axes objects.
     """
 
-    upleft, bttmright, imgsize = setup_image()
+    upleft, bttmright, imgsize, fig_name = setup_image()
 
     mp = MapOverlay(upleft, bttmright, imgsize)
 
@@ -575,7 +597,7 @@ def spatial_heterogeneity(loads, time, N, fig_path, filename='spatial_heterogene
     :return fig, ax: Matplotlib figure and axes objects.
     """
 
-    mask = ~np.isnan(loads[:, time])
+    mask = ((~np.isnan(loads[:, time])) & (~(loads[:, time] <= 0.05)))
     loads = loads[mask]
 
     N = len(loads)
@@ -629,6 +651,9 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
 
     bins = range(P)
 
+    with np.errstate(invalid='ignore'):
+        loads[loads <= .05] = np.nan
+        
     # Getting the mean load over all locations at each time for the plot.
     counts = np.nanmean(loads, axis=0) * 100
 
@@ -727,6 +752,9 @@ def temporal_day_plots(loads, P, fig_path, filename='temporal_day_plots.png'):
 
     i = 1
 
+    with np.errstate(invalid='ignore'):
+        loads[loads <= .05] = np.nan
+
     for day in days:
         bins = range(8, (P/6) + 8)
 
@@ -791,6 +819,10 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots.png'):
     hours = [[j + i*(P/6) for i in range(6)] for j in range((P/6))]
 
     i = 1
+
+    with np.errstate(invalid='ignore'):
+        loads[loads <= .05] = np.nan
+
     for hour in hours:
         bins = range(6)
 
@@ -913,7 +945,7 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
         im = imread(os.path.join(fig_path, fig_name))
         ax.imshow(im)
 
-        mask = ~np.isnan(loads[:, time])
+        mask = ((~np.isnan(loads[:, time])) & (~(loads[:, time] <= 0.05)))
         pixpos_time = pixpos[mask]
 
         # Adding in the midpoints of the block faces to the map as points.
@@ -933,7 +965,7 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
         if num_comps == 4:
             colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
         else:
-            colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
+            colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0, 1, num_comps)]
         
         cluster_data = np.hstack((loads[mask][:, time, None], gps_loc[mask]))
 
@@ -1323,8 +1355,8 @@ def model_selection(loads, gps_loc, P, fig_path):
 
         # Varying the number of components and getting AIC, BIC, and likelihood.
         for num_comps in range(min_comps, max_comps):
-            cluster_data = np.hstack((loads[~np.isnan(loads[:, time])][:, time, None], 
-                                      gps_loc[~np.isnan(loads[:, time])]))
+            mask = ((~np.isnan(loads[:, time])) & (~(loads[:, time] <= 0.05)))
+            cluster_data = np.hstack((loads[mask][:, time, None], gps_loc[mask]))
 
             scaler = MinMaxScaler().fit(cluster_data)
             cluster_data = scaler.transform(cluster_data)

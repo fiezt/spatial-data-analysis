@@ -30,22 +30,26 @@ def get_data(month, year, file_path, verbose=False):
     # Part of the API command.
     url2 = '&to='
 
-    date = month_name[month][1] + '01' + str(year)
-    start_date_static = date
+    start_date = month_name[month][1] + '01' + str(year)
+    start_date_static = start_date
 
-    date_dt = datetime.datetime.strptime(date,'%m%d%Y')
+    start_date_dt = datetime.datetime.strptime(start_date,'%m%d%Y')
 
     num_days = calendar.monthrange(year, month)[1]
     final_date = month_name[month][1] + str(num_days) + str(year)
     
     call_count = 0
 
-    while True:
+    while start_date != final_date:
+        
+        # Incrementing the ending state.
+        end_date_dt = start_date_dt + datetime.timedelta(days=1)
+        end_date = end_date_dt.strftime('%m%d%Y')
 
         if verbose:
-            print('Retrieving data from %s to %s' % (date, date))
+            print('Retrieving data from %s to %s' % (start_date, end_date))
         
-        url = url1 + date + url2 + date
+        url = url1 + start_date + url2 + end_date
     
         # Making API call.
         response = urllib2.urlopen(url).read()
@@ -58,13 +62,9 @@ def get_data(month, year, file_path, verbose=False):
         
         for line in response:
             parsed_responses.append(line.split(','))
-
-        if date == final_date:
-            break
     
-        # Incrementing the date.
-        date_dt = date_dt + datetime.timedelta(days=1)
-        date = date_dt.strftime('%m%d%Y')
+        start_date = end_date
+        start_date_dt = end_date_dt
     
         call_count += 1
     
@@ -73,15 +73,32 @@ def get_data(month, year, file_path, verbose=False):
     # Making the first row the header.
     transactions.columns = transactions.iloc[0]
     transactions = transactions[1:]
-
-    transactions.drop_duplicates(inplace=True)
     
     # Writing transactions to a file.
     transactions.to_csv(os.path.join(file_path, start_date_static + '_' + final_date + '.csv'), index=False)
 
 
+def get_meter_codes(elkey, paystation_info):
+    """Get the meter codes for each paystation associated with an element key.
+    
+    Note: element keys correspond to blocks which may have multiple meters on them.
+    
+    :param elkey: Integer block-face element key to get meter codes for.
+    :param paystation_info: Dataframe containing paystation information.
+    
+    :return meter_codes: Numpy array of meter codes associated with a block.
+    """
+    
+    curr_key_meters = paystation_info.loc[paystation_info['ELMNTKEY'] == elkey]
+    
+    # Getting the meter codes for the current element key.
+    meter_codes = curr_key_meters['PANDD_NBR'].values
+    
+    return meter_codes
+
+
 def get_supply(elkey, date, block_info):
-    """Get the maximum supply (# spots) for an element key and date.
+    """Get the maximum supply (# of spots) for an element key and date.
     
     :param elkey: Integer block-face element key to get the supply for.
     :param date: Datetime object in which to get the supply for.
@@ -105,12 +122,26 @@ def get_supply(elkey, date, block_info):
     return supply
 
 
-def get_block_load(date, transactions, key, supply):
+def get_element_keys_by_paid_area(paid_area, paystation_info):
+    """Get the element keys associated with a paid area.
+    
+    :param paid_area: String of paid area to get element keys for.
+    :param paystation_info: Dataframe containing paystation_info information.
+    
+    :return elkeys: List of element keys associated with a paid area.
+    """
+    
+    elkeys = paystation_info[paystation_info['PAIDAREA'] == paid_area]['ELMNTKEY'].tolist()
+    
+    return elkeys
+
+
+def get_block_load(date, transactions, meter_codes, supply):
     """Get the load for an element key.
     
     :param date: Date in which to get supply for in string format e.g. "2017-01-19"
     :param transactions: Dataframe containing the paid parking transactions. 
-    :param key: Integer element key for the block to get the load for.
+    :param meter_codes: List of meter codes for an element key.
     :param supply: Numpy array of the supply for the element key.
     
     return output: Zipped list with two arrays, the first is the normalized load 
@@ -124,27 +155,28 @@ def get_block_load(date, transactions, key, supply):
     mask = ((transactions['TransactionDateTime'] > time_range[0]) & (transactions['TransactionDateTime'] < time_range[-1]))
     date_transactions = transactions[mask]
         
-    block_transactions = date_transactions.loc[date_transactions['ElementKey'] == key]
-    time_duration = block_transactions.ix[:, ['PaidDuration', 'TransactionDateTime']].values 
-    
-    # Convert paid duration column from seconds to minutes.
-    time_duration[:, 0] = time_duration[:, 0]/60.0 
-    
-    # Convert to datetime format from string.
-    date_pd = pd.DatetimeIndex([date])[0]
-    date_python = date_pd.to_pydatetime()
+    for code in meter_codes:
+        meter_transactions = date_transactions.loc[date_transactions['MeterCode'] == code]
+        time_duration = meter_transactions.ix[:, ['PaidDuration', 'TransactionDateTime']].values 
+        
+        # Convert paid duration column from seconds to minutes.
+        time_duration[:, 0] = time_duration[:, 0]/60.0 
+        
+        # Convert to datetime format from string.
+        date_pd = pd.DatetimeIndex([date])[0]
+        date_python = date_pd.to_pydatetime()
 
-    for i in range(len(time_duration)):
-        
-        # Convert TransactionDateTime column to datetime format.
-        time_datetime = time_duration[i, 1].to_pydatetime()
-        
-        # Get the time in seconds from the start of the day the transaction began at.
-        time_seconds = float(time_datetime.strftime('%s')) - float(date_python.strftime('%s'))
-        time_seconds /= 60.0
-        
-        # Saving transaction start time and duration in minutes.
-        data.append([int(time_seconds), int(time_duration[i, 0])])
+        for i in range(len(time_duration)):
+            
+            # Convert TransactionDateTime column to datetime format.
+            time_datetime = time_duration[i, 1].to_pydatetime()
+            
+            # Get the time in seconds from the start of the day the transaction began at.
+            time_seconds = float(time_datetime.strftime('%s')) - float(date_python.strftime('%s'))
+            time_seconds /= 60.0
+            
+            # Saving transaction start time and duration in minutes.
+            data.append([int(time_seconds), int(time_duration[i, 0])])
     
     start = np.zeros([1, 60*24])
     stop = np.zeros([1, 60*24])
@@ -166,7 +198,7 @@ def get_block_load(date, transactions, key, supply):
     return output
 
 
-def get_loads(month, year, subarea, block_info, transactions, data_path):
+def get_loads(month, year, subarea, paystation_info, block_info, transactions, data_path):
     """Get the loads for a subarea using the paid parking transactions.
 
     Note that the transaction data will be saved in a subfolder in the path provided
@@ -176,6 +208,7 @@ def get_loads(month, year, subarea, block_info, transactions, data_path):
     :param month: Integer month to get occupancy data for.
     :param year: Integer year to get occupancy for.
     :param subarea: String of zone to get occupancy data for.
+    :param paystation_info: Dataframe containing paystation information.
     :param block_info: Dataframe containing blockface supply information.
     :param transactions: Dataframe containing paid parking transaction data.
     :param data_path: Path to save directories containing load files in.
@@ -184,6 +217,8 @@ def get_loads(month, year, subarea, block_info, transactions, data_path):
     month_name = {1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun', 
                   7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'}
     
+
+
     subarea_dir = data_path + '/' + subarea.translate(None, string.punctuation).replace(' ', '') + '_Minute'
     if not os.path.exists(subarea_dir):
         os.makedirs(subarea_dir)
@@ -195,7 +230,7 @@ def get_loads(month, year, subarea, block_info, transactions, data_path):
     date_end = str(month) + '/' + str(num_days) + '/' + str(year)
     dates = pd.date_range(date_start, date_end, freq='1D')
         
-    element_keys = sorted(block_info.loc[block_info['PaidParkingArea'] == subarea]['ElementKey'].unique().tolist())
+    element_keys = get_element_keys_by_paid_area(subarea, paystation_info)
     
     for key in element_keys:
 
@@ -207,7 +242,8 @@ def get_loads(month, year, subarea, block_info, transactions, data_path):
             supply = get_supply(key, date, block_info)
 
             if supply:
-                block_load = get_block_load(curr_date, transactions, key, supply)
+                meter_codes = get_meter_codes(key, paystation_info)
+                block_load = get_block_load(curr_date, transactions, meter_codes, supply)
                 loads.append(block_load[0][0])
             else: 
                 loads.append(np.nan*np.ones(1440))
@@ -226,10 +262,12 @@ def create_loads(subareas, months, years, file_paths, data_path, verbose=False):
     :param months: List of integer months to get loads for subareas.
     :param years: List of integer years corresponding to months to get loads for subareas.
     :param file_paths: List of file paths to paid parking transaction month data.
+    :param data_path: File path to block_info.csv and paystation_info.csv
     :param verbose: Bool indicating whether to print progress.
     """
 
     block_info = pd.read_csv(os.path.join(data_path, 'block_info.csv'))
+    paystation_info = pd.read_csv(os.path.join(data_path, 'paystation_info.csv'))
 
     for month, year, file in zip(months, years, file_paths):
 
@@ -240,7 +278,7 @@ def create_loads(subareas, months, years, file_paths, data_path, verbose=False):
             if verbose:
                 print('Getting loads for month %d and year %d for subarea %s' % (month, year, subarea))
 
-            get_loads(month, year, subarea, block_info, transactions, data_path)
+            get_loads(month, year, subarea, paystation_info, block_info, transactions, data_path)
 
 
 def aggregate_loads(start_hour, end_hour, minute_interval, months, years, file_paths):
@@ -283,7 +321,7 @@ def aggregate_loads(start_hour, end_hour, minute_interval, months, years, file_p
             date = date[:4] + '-' + date[4:]
             year, month = int(date.split('-')[0]), date.split('-')[1]
 
-            if year not in years or month_map[month] not in months:
+            if year not in years and month not in months:
                 continue
 
             data = pd.read_csv(fi)

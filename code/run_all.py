@@ -9,7 +9,7 @@ import figure_functions
 import kmeans_utils
 
 
-def run_figures(loads, gps_loc, N, P, fig_path, animation_path, time):
+def run_figures(element_keys, loads, gps_loc, N, P, data_path, fig_path, animation_path, time):
     """Create the visualizations of the spatial characteristics of the parking data.
 
     :param loads: Numpy array with each row containing the load for a day of 
@@ -23,7 +23,12 @@ def run_figures(loads, gps_loc, N, P, fig_path, animation_path, time):
     :param time: Integer index of column to use from loads for majority of plots.
     """
 
+    figure_functions.plot_neighborhoods(element_keys, data_path, fig_path)
+
+    figure_functions.plot_paid_areas(element_keys, data_path, fig_path)
+
     figure_functions.model_selection(loads, gps_loc, P, fig_path)
+
     figure_functions.create_animation(loads, gps_loc, N, P, fig_path, animation_path)
     
     fig, ax = figure_functions.mixture_plot(loads=loads, gps_loc=gps_loc, 

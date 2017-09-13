@@ -39,8 +39,7 @@ def load_data(data_path):
     elkeys = sorted(load_data.keys())
     N = len(elkeys)
 
-    for key in elkeys:
-        
+    for key in elkeys:        
         # Loading the data for a single block.
         block_data = pd.DataFrame(load_data[key].items(), columns=['Datetime', 'Load'])
 
@@ -144,7 +143,7 @@ def load_daily_data_standalone(data_path):
     return park_data, gps_loc, N
 
 
-def load_data_new(data_path, load_paths):
+def load_data_new(data_path, load_paths, verbose=True):
     """Process loads 
     
     :param data_path:
@@ -196,13 +195,10 @@ def load_data_new(data_path, load_paths):
         load_paths = [load_paths]
 
     for load_path in load_paths:
-        for fi in sorted(glob.glob(load_path + '/*.csv')):
+        for fi in sorted(glob.glob(load_path + '/*.csv'), key=lambda fi: int(fi.split('/')[-1].split('.')[0])):
             key = int(fi.split('/')[-1].split('.')[0])
 
             block_data = pd.read_csv(fi, names=['Datetime', 'Load'])
-
-            # Clipping the loads to be no higher than 1.5
-            block_data['Load'] = block_data['Load'].clip_upper(1.5)
 
             block_data['Datetime'] = pd.to_datetime(block_data['Datetime'])
             block_data.sort_values(by='Datetime', inplace=True)
@@ -225,8 +221,18 @@ def load_data_new(data_path, load_paths):
             block_data = block_data.loc[~block_data['Date'].isin(holidays)]
             block_data.reset_index(inplace=True, drop=True)
 
+            # Clipping the loads to be no higher than 1.5
+            block_data['Load'] = block_data['Load'].clip_upper(1.5)
+
             # If block contains no data, skip it.
             if len(block_data) == 0:
+                if verbose:
+                    print('Skipping block %d because the supply is always 0.' % key)
+                continue
+
+            if len(block_data.loc[block_data['Load'] != 0]) == 0:
+                if verbose:
+                    print('Skipping block %d because the occupancy is always 0.' % key)
                 continue
 
             # Get GPS midpoint for blockface and skip if no information for it.
@@ -240,6 +246,8 @@ def load_data_new(data_path, load_paths):
                 mid_long = (lon1 + lon2)/2.
                 gps_loc.append([mid_lat, mid_long])
             else:
+                if verbose:
+                    print('Skipping block %d because it was not found in locations.' % key)
                 continue
 
             # Getting blockface info for the current key about hours of operation.
@@ -263,12 +271,14 @@ def load_data_new(data_path, load_paths):
                     if row_null['EffectiveEndDate']:
                         mask1 = ((row['EffectiveStartDate'] <= block_data['Datetime'])
                                  & (start1 <= block_data['Datetime']) 
-                                 & (end1 > block_data['Datetime']))
+                                 & (end1 > block_data['Datetime'])
+                                 & (block_data['Day'] != 5))
                     else:
                         mask1 = ((row['EffectiveStartDate'] <= block_data['Datetime']) 
                                  & (row['EffectiveEndDate'] >= block_data['Datetime'])
                                  & (start1 <= block_data['Datetime']) 
-                                 & (end1 > block_data['Datetime']))
+                                 & (end1 > block_data['Datetime'])
+                                 & (block_data['Day'] != 5))
 
                     block_data.loc[mask1, 'Load'] = np.nan    
 
@@ -280,12 +290,14 @@ def load_data_new(data_path, load_paths):
                     if row_null['EffectiveEndDate']:
                         mask2 = ((row['EffectiveStartDate'] <= block_data['Datetime'])
                                 & (start2 <= block_data['Datetime']) 
-                                & (end2 > block_data['Datetime']))
+                                & (end2 > block_data['Datetime'])
+                                & (block_data['Day'] != 5))
                     else:
                         mask2 = ((row['EffectiveStartDate'] <= block_data['Datetime']) 
                                  & (row['EffectiveEndDate'] >= block_data['Datetime'])
                                  & (start2 <= block_data['Datetime']) 
-                                 & (end2 > block_data['Datetime']))
+                                 & (end2 > block_data['Datetime'])
+                                 & (block_data['Day'] != 5))
 
                     block_data.loc[mask2, 'Load'] = np.nan  
 
@@ -297,12 +309,14 @@ def load_data_new(data_path, load_paths):
                     if row_null['EffectiveEndDate']:
                         mask3 = ((row['EffectiveStartDate'] <= block_data['Datetime'])
                                  & (start3 <= block_data['Datetime']) 
-                                 & (end3 > block_data['Datetime']))
+                                 & (end3 > block_data['Datetime'])
+                                 & (block_data['Day'] != 5))
                     else:
                         mask3 = ((row['EffectiveStartDate'] <= block_data['Datetime']) 
                                  & (row['EffectiveEndDate'] >= block_data['Datetime'])
                                  & (start3 <= block_data['Datetime']) 
-                                 & (end3 > block_data['Datetime']))
+                                 & (end3 > block_data['Datetime'])
+                                 & (block_data['Day'] != 5))
 
                     block_data.loc[mask3, 'Load'] = np.nan   
 
@@ -344,4 +358,4 @@ def load_data_new(data_path, load_paths):
     # Making the first index the date, and the second the element key, sorted by date.
     park_data = park_data.swaplevel(0, 1).sort_index()
 
-    return element_keys, gps_loc, avg_loads, park_data, N, P, idx_to_day_hour, day_hour_to_idx
+    return element_keys, avg_loads, gps_loc, park_data, N, P, idx_to_day_hour, day_hour_to_idx
