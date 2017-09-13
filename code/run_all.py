@@ -63,7 +63,7 @@ def run_figures(element_keys, loads, gps_loc, N, P, data_path, fig_path, animati
     fig, ax = figure_functions.temporal_hour_plots(loads=loads, fig_path=fig_path)
 
 
-def gmm_simulations(park_data, gps_loc, N, fig_path, results_path):
+def gmm_simulations(park_data, gps_loc, times, k, p_value, fig_path, results_path):
     """Running several GMM tests including prediction and spatial correlation.
     
     :return park_data: Multi-index DataFrame with data sorted by date and block key.
@@ -74,17 +74,19 @@ def gmm_simulations(park_data, gps_loc, N, fig_path, results_path):
     :param results_path: File path to save results files to.
     """
 
-    results = gmm.locational_demand_analysis(park_data, gps_loc, N)
+    results = gmm.locational_demand_analysis(park_data, gps_loc, k)
 
     days = [result[0] for result in results]
     hours = [result[1] for result in results]
     errors = [result[2] for result in results]
     morans_mixture = [result[3] for result in results]
-    morans_adjacent = [result[4] for result in results]
-    means = [result[5] for result in results]
+    morans_area = [result[4] for result in results]
+    morans_adjacent = [result[5] for result in results]
+    means = [result[6] for result in results]
 
     write_gmm_results(errors, results_path)
-    write_moran_results(days, hours, morans_mixture, morans_adjacent, results_path)
+    write_moran_results(days, hours, morans_mixture, morans_area,
+                        morans_adjacent, p_value, results_path)
 
     distances, centroids = kmeans_utils.get_distances(means)
     write_centroid_distance_results(days, hours, means, distances, results_path)
@@ -92,10 +94,10 @@ def gmm_simulations(park_data, gps_loc, N, fig_path, results_path):
     all_time_points = kmeans_utils.get_centroid_circle_paths(distances, centroids)
 
     fig, ax = figure_functions.centroid_radius(centroids, all_time_points, gps_loc,
-                                               times=range(6), fig_path=fig_path, shape=(2,3))
+                                               times=times, fig_path=fig_path, shape=(1,len(times)))
 
-    fig, ax = figure_functions.centroid_plots(means, gps_loc, N, times=range(6), 
-                                              fig_path=fig_path, shape=(2,3))
+    fig, ax = figure_functions.centroid_plots(means, gps_loc, times=times, 
+                                              fig_path=fig_path, shape=(1,len(times)))
 
 
 def write_gmm_results(errors, results_path):
@@ -133,7 +135,7 @@ def write_gmm_results(errors, results_path):
     day_map = {0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday'}
 
     
-def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
+def write_moran_results(days, hours, morans_mix, morans_area, morans_adj, p_value, results_path):
     """Writing all the Moran autocorrelation results to files.
 
     :param days: List of days indexes.
@@ -150,6 +152,10 @@ def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
     I_mix = [[morans_mix[j][i][0] for i in xrange(len(morans_mix[j]))] for j in xrange(len(morans_mix))]
     one_sided_mix = [[morans_mix[j][i][4] for i in xrange(len(morans_mix[j]))] for j in xrange(len(morans_mix))]
     two_sided_mix = [[morans_mix[j][i][5] for i in xrange(len(morans_mix[j]))] for j in xrange(len(morans_mix))]
+
+    I_area = [[morans_area[j][i][0] for i in xrange(len(morans_area[j]))] for j in xrange(len(morans_area))]
+    one_sided_area = [[morans_area[j][i][4] for i in xrange(len(morans_area[j]))] for j in xrange(len(morans_area))]
+    two_sided_area = [[morans_area[j][i][5] for i in xrange(len(morans_area[j]))] for j in xrange(len(morans_area))]
 
     I_adj = [[morans_adj[j][i][0] for i in xrange(len(morans_adj[j]))] for j in xrange(len(morans_adj))]
     one_sided_adj = [[morans_adj[j][i][4] for i in xrange(len(morans_adj[j]))] for j in xrange(len(morans_adj))]
@@ -171,6 +177,7 @@ def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
         index.append(day + ' ' + hour)
         
 
+    ###################### Writing moran mixture results #######################
     I_mix_df = pd.DataFrame(data=I_mix, index=index)
     I_mix_df = I_mix_df.fillna('')
     I_mix_df.to_csv(os.path.join(results_path, 'moran_mix_I_results.csv'), 
@@ -186,7 +193,7 @@ def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
     two_sided_mix_df.to_csv(os.path.join(results_path, 'p_two_sided_mix_results.csv'), 
                             sep=',', header=False)
 
-    one_sided_mix_sig = [round(len(np.where(np.array(row) < .05)[0])*100/float(len(row)), 2) 
+    one_sided_mix_sig = [round(len(np.where(np.array(row) < p_value)[0])*100/float(len(row)), 2) 
                          for row in one_sided_mix]
 
     one_sided_mix_sig_df = pd.DataFrame(data=one_sided_mix_sig, index=index)
@@ -194,14 +201,51 @@ def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
     one_sided_mix_sig_df.to_csv(os.path.join(results_path, 'p_one_sided_mix_significance.csv'), 
                             sep=',', header=False)
 
-    two_sided_mix_sig = [round(len(np.where(np.array(row) < .05)[0])*100/float(len(row)), 2) 
+    two_sided_mix_sig = [round(len(np.where(np.array(row) < p_value)[0])*100/float(len(row)), 2) 
                          for row in two_sided_mix]
 
     two_sided_mix_sig_df = pd.DataFrame(data=two_sided_mix_sig, index=index)
     two_sided_mix_sig_df = two_sided_mix_sig_df.fillna('')
     two_sided_mix_sig_df.to_csv(os.path.join(results_path, 'p_two_sided_mix_significance.csv'), 
                                 sep=',', header=False)
+    ############################################################################
 
+
+    ###################### Writing moran area results ##########################
+    I_area_df = pd.DataFrame(data=I_area, index=index)
+    I_area_df = I_area_df.fillna('')
+    I_area_df.to_csv(os.path.join(results_path, 'moran_area_I_results.csv'), 
+                    sep=',', header=False)
+
+    one_sided_area_df = pd.DataFrame(data=one_sided_area, index=index)
+    one_sided_area_df = one_sided_area_df.fillna('')
+    one_sided_area_df.to_csv(os.path.join(results_path, 'p_one_sided_area_results.csv'), 
+                            sep=',', header=False)
+
+    two_sided_area_df = pd.DataFrame(data=two_sided_area, index=index)
+    two_sided_area_df = two_sided_area_df.fillna('')
+    two_sided_area_df.to_csv(os.path.join(results_path, 'p_two_sided_area_results.csv'), 
+                            sep=',', header=False)
+
+    one_sided_area_sig = [round(len(np.where(np.array(row) < p_value)[0])*100/float(len(row)), 2) 
+                         for row in one_sided_area]
+
+    one_sided_area_sig_df = pd.DataFrame(data=one_sided_area_sig, index=index)
+    one_sided_area_sig_df = one_sided_area_sig_df.fillna('')
+    one_sided_area_sig_df.to_csv(os.path.join(results_path, 'p_one_sided_area_significance.csv'), 
+                            sep=',', header=False)
+
+    two_sided_area_sig = [round(len(np.where(np.array(row) < p_value)[0])*100/float(len(row)), 2) 
+                         for row in two_sided_area]
+
+    two_sided_area_sig_df = pd.DataFrame(data=two_sided_area_sig, index=index)
+    two_sided_area_sig_df = two_sided_area_sig_df.fillna('')
+    two_sided_area_sig_df.to_csv(os.path.join(results_path, 'p_two_sided_area_significance.csv'), 
+                                sep=',', header=False)
+    ############################################################################
+
+
+    ###################### Writing moran adjacent results ######################
     I_adj_df = pd.DataFrame(data=I_adj, index=index)
     I_adj_df = I_adj_df.fillna('')
     I_adj_df.to_csv(os.path.join(results_path, 'moran_adj_I_results.csv'), sep=',', header=False)
@@ -214,7 +258,7 @@ def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
     two_sided_adj_df = two_sided_adj_df.fillna('')
     two_sided_adj_df.to_csv(os.path.join(results_path, 'p_two_sided_adj_results.csv'), sep=',', header=False)
 
-    one_sided_adj_sig = [round(len(np.where(np.array(row) < .05)[0])*100/float(len(row)), 2) 
+    one_sided_adj_sig = [round(len(np.where(np.array(row) < p_value)[0])*100/float(len(row)), 2) 
                          for row in one_sided_adj]
 
     one_sided_adj_sig_df = pd.DataFrame(data=one_sided_adj_sig, index=index)
@@ -222,31 +266,44 @@ def write_moran_results(days, hours, morans_mix, morans_adj, results_path):
     one_sided_adj_sig_df.to_csv(os.path.join(results_path, 'p_one_sided_adj_significance.csv'), 
                                 sep=',', header=False)
 
-    two_sided_adj_sig = [round(len(np.where(np.array(row) < .05)[0])*100/float(len(row)), 2) 
+    two_sided_adj_sig = [round(len(np.where(np.array(row) < p_value)[0])*100/float(len(row)), 2) 
                          for row in two_sided_adj]
 
     two_sided_adj_sig_df = pd.DataFrame(data=two_sided_adj_sig, index=index)
     two_sided_adj_sig_df = two_sided_adj_sig_df.fillna('')
     two_sided_adj_sig_df.to_csv(os.path.join(results_path, 'p_two_sided_adj_significance.csv'), 
                                 sep=',', header=False)
+    ############################################################################
 
+
+    ###################### Writing moran average results #######################
     I_mix_avg = np.array([item for sublist in I_mix for item in sublist]).mean()
     p_one_mix_sig_avg = np.array(one_sided_mix_sig).mean()
     p_two_mix_sig_avg = np.array(two_sided_mix_sig).mean()
+
+    I_area_avg = np.array([item for sublist in I_area for item in sublist]).mean()
+    p_one_area_sig_avg = np.array(one_sided_area_sig).mean()
+    p_two_area_sig_avg = np.array(two_sided_area_sig).mean()
 
     I_adj_avg = np.array([item for sublist in I_adj for item in sublist]).mean()
     p_one_adj_sig_avg = np.array(one_sided_adj_sig).mean()
     p_two_adj_sig_avg = np.array(two_sided_adj_sig).mean()
 
-    avgs = np.array([[I_mix_avg, I_adj_avg], [p_one_mix_sig_avg, p_one_adj_sig_avg], 
-                     [p_two_mix_sig_avg, p_two_adj_sig_avg]])
+    avgs = np.array([[I_mix_avg, I_area_avg, I_adj_avg], 
+                     [p_one_mix_sig_avg, p_one_area_sig_avg, p_one_adj_sig_avg], 
+                     [p_two_mix_sig_avg, p_two_area_sig_avg, p_two_adj_sig_avg]])
+
     index = ['Moran I Over All Days and Times', 
              'Significant One Sided P Value Percentage Average Over All Days And Times', 
              'Significant Two Sided P Value Percentage Average Over All Days And Times']
 
-    cols = ['Using Mixture Connections as Weights Matrix', 'Using Adjacent Connections as Weight Matrix']
+    cols = ['Using Mixture Connections as Weight Matrix', 
+            'Using Paid Area Connections as Weight Matrix',
+            'Using Adjacent Connections as Weight Matrix']
+
     avg_df = pd.DataFrame(avgs, index=index, columns=cols)
     avg_df.to_csv(os.path.join(results_path, 'moran_averages.csv'), sep=',')
+    ############################################################################
 
 
 def write_centroid_distance_results(days, hours, means, distances, results_path):

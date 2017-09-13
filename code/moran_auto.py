@@ -1,7 +1,110 @@
 import numpy as np
 import pickle
 import os
+import pandas as pd
+from collections import defaultdict
 import scipy.stats as st
+
+
+def get_area_weights(train_active_index, N, data_path=os.getcwd() + '/../data'):
+    """
+
+    """
+
+    weights = np.zeros((N, N))
+
+    area_info = pd.read_csv(os.path.join(data_path, 'paystation_info.csv'))
+    area_info = area_info[['ELMNTKEY', 'PAIDAREA', 'SUBAREA']]
+
+    all_keys = area_info['ELMNTKEY'].unique().tolist()
+
+    area_dict = defaultdict(list)
+    key_dict = {}
+
+    count = 0
+    for key in train_active_index:
+
+        if key in all_keys:
+            neighborhood = area_info.loc[area_info['ELMNTKEY'] == key]['PAIDAREA'].unique().tolist()[0]
+            subarea = area_info.loc[area_info['ELMNTKEY'] == key]['SUBAREA'].unique().tolist()[0]
+            area = (neighborhood, subarea)   
+        else:
+            pass
+
+        area_dict[area].append(count)
+        key_dict[key] = area
+
+        count += 1
+    
+    for i in xrange(N):
+        weights[i, area_dict[key_dict[train_active_index[i]]]] = 1
+
+    di = np.diag_indices(N)
+
+    weights[di] = 0
+
+    return weights
+
+
+def moran_area(x, train_active_index, N):
+    """
+
+    """
+
+    weights = get_area_weights(train_active_index, N)
+
+    W = weights.sum()
+    z = x - x.mean()
+
+    top = sum(weights[i, j]*z[i]*z[j] for i in xrange(N) for j in xrange(N)) 
+    bottom = np.dot(z.T, z)
+
+    I = (N/W) * top/bottom
+
+    return I
+
+
+def get_adjacent_weights(gps_loc, N, k=5):
+    """Get the weight matrix for Moran I by using adjacent connections.
+    
+    :param N: Integer number of samples (locations).
+    :param path: File path to the data about neighboring blocks.
+
+    :return weights: Numpy array weight matrix.
+    """
+
+    weights = np.zeros((N, N))
+
+    for i in xrange(N):
+        neighbors = np.vstack(sorted([(j, np.linalg.norm(gps_loc[i] - gps_loc[j])) for j in xrange(N)], key=lambda x: x[1])[1:k+1])[:, 0].astype('int')
+        weights[i, neighbors] = 1
+
+    return weights
+
+
+def moran_adjacent(x, gps_loc, N, k):
+    """Find the Moran I using the adjacent weight matrix.
+
+    :param x: Numpy array of the variable of interest.
+    :param block_keys: List of ordered block key identifiers.
+    :param N: Integer number of samples (locations).
+    :param path: The path to the location of the adjacency information.
+    :param weight_func: Function to get the weights for Moran's I.
+
+    :return I: Moran I.
+    """
+
+    weights = get_adjacent_weights(gps_loc, N, k)
+
+    W = weights.sum()
+    z = x - x.mean()
+
+    top = sum(weights[i, j]*z[i]*z[j] for i in xrange(N) for j in xrange(N)) 
+    bottom = np.dot(z.T, z)
+
+    I = (N/W) * top/bottom
+
+    return I
 
 
 def get_mixture_weights(train_labels, N):
@@ -32,47 +135,7 @@ def get_mixture_weights(train_labels, N):
     return weights
 
 
-def get_adjacent_weights(block_keys, N, path=os.getcwd() + '/../data'):
-    """Get the weight matrix for Moran I by using adjacent connections.
-    
-    :param block_keys: List of block key identifiers.
-    :param N: Integer number of samples (locations).
-    :param path: File path to the data about neighboring blocks.
-
-    :return weights: Numpy array weight matrix.
-    """
-
-    weights = np.genfromtxt(os.path.join(path, "belltown-adjacency1.txt"), delimiter=" ")
-
-    return weights
-
-
-def moran_adjacent(x, block_keys, N, path=os.getcwd() + '/../data', weight_func=get_adjacent_weights):
-    """Find the Moran I using the adjacent weight matrix.
-
-    :param x: Numpy array of the variable of interest.
-    :param block_keys: List of ordered block key identifiers.
-    :param N: Integer number of samples (locations).
-    :param path: The path to the location of the adjacency information.
-    :param weight_func: Function to get the weights for Moran's I.
-
-    :return I: Moran I.
-    """
-
-    weights = weight_func(block_keys, N, path)
-
-    W = weights.sum()
-    z = x - x.mean()
-
-    top = sum(weights[i,j]*z[i]*z[j] for i in xrange(N) for j in xrange(N)) 
-    bottom = np.dot(z.T, z)
-
-    I = (N/W) * top/bottom
-
-    return I
-
-
-def moran_mixture(x, train_labels, N, weight_func=get_mixture_weights):
+def moran_mixture(x, train_labels, N):
     """Calculating the Moran I autocorrelation for the mixture model weights.
 
     The weight matrix is used by giving weight 1 at the column index if the
@@ -83,12 +146,11 @@ def moran_mixture(x, train_labels, N, weight_func=get_mixture_weights):
     :param train_labels: Numpy array like containing class label for each data 
     point in x.
     :param N: Integer number of samples.
-    :param weight_func: Function to get the weights for Moran's I.
 
     :return I: float of Moran I autocorrelation.
     """
 
-    weights = weight_func(train_labels, N)
+    weights = get_mixture_weights(train_labels, N)
 
     W = weights.sum()
     z = x - x.mean()
@@ -99,6 +161,7 @@ def moran_mixture(x, train_labels, N, weight_func=get_mixture_weights):
     try:
         I = (N/W) * top/bottom
     except:
+        print('Value is none')
         I = None
 
     return I

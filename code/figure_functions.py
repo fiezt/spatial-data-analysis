@@ -653,7 +653,7 @@ def temporal_heterogeneity(loads, time, P, fig_path, filename='temporal_heteroge
 
     with np.errstate(invalid='ignore'):
         loads[loads <= .05] = np.nan
-        
+
     # Getting the mean load over all locations at each time for the plot.
     counts = np.nanmean(loads, axis=0) * 100
 
@@ -1067,7 +1067,7 @@ def mixture_plot(loads, gps_loc, times, N, fig_path,
     return fig, ax
 
  
-def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4, 
+def centroid_plots(means, gps_loc, times, fig_path, num_comps=4, 
                    shape=None, filename='centroid_plot.png', 
                    title=''):
     
@@ -1105,7 +1105,7 @@ def centroid_plots(means, gps_loc, N, times, fig_path, num_comps=4,
     mp = MapOverlay(upleft, bttmright, imgsize)
 
     # Converting the gps locations to pixel positions.
-    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(N)])
+    pixpos = np.array([mp.to_image_pixel_position(list(gps_loc[i,:])) for i in range(len(gps_loc))])
 
     # Setting center of image.
     center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
