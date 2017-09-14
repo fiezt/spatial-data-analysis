@@ -2,65 +2,72 @@ import os
 import sys
 import numpy as np
 import pandas as pd
-from collections import defaultdict
 import utils
 import gmm
 import figure_functions
 import kmeans_utils
 
 
-def run_figures(element_keys, loads, gps_loc, N, P, data_path, fig_path, animation_path, time):
+def run_figures(element_keys, loads, gps_loc, num_comps, data_path, fig_path,
+                animation_path, time, show_fig):
     """Create the visualizations of the spatial characteristics of the parking data.
 
-    :param loads: Numpy array with each row containing the load for a day of 
-    week and time, where each column is a day of week and hour.
-    :param gps_loc: Numpy array with each row containing the lat, long pair 
-    midpoints for a block.
-    :param N: Integer number of samples (locations).
-    :param P: Integer number of total hours in the week with loads.
-    :param fig_path: File path to save figures to.
-    :param animation_path: File path to save mixture animation to.
-    :param time: Integer index of column to use from loads for majority of plots.
+    :param element_keys: List containing the keys of block-faces to draw on map.
+    :param loads: Numpy array where each row is the load data for a block-face
+    and each column corresponds to a day of week and hour.
+    :param gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
+    :param num_comps: Integer number of mixture components for the model.
+    :param data_path: File path to the paystation_info.csv and blockface_locs.p.
+    :param fig_path: Path to retrieve the background image from.
+    :param animation_path: Path to save the animation video to.
+    :param time: Integer column index to get the load data from.
+    :param show_fig: Bool indicating whether to show the images.
     """
 
-    figure_functions.plot_neighborhoods(element_keys, data_path, fig_path)
+    figure_functions.plot_neighborhoods(element_keys=element_keys, data_path=data_path,
+                                        fig_path=fig_path)
 
-    figure_functions.plot_paid_areas(element_keys, data_path, fig_path)
+    figure_functions.plot_paid_areas(element_keys=element_keys, data_path=data_path,
+                                     fig_path=fig_path)
 
-    figure_functions.model_selection(loads, gps_loc, P, fig_path)
+    figure_functions.surface_plot(loads=loads, gps_loc=gps_loc, time=time,
+                                  fig_path=fig_path, show_fig=show_fig)
 
-    figure_functions.create_animation(loads, gps_loc, N, P, fig_path, animation_path)
-    
-    fig, ax = figure_functions.mixture_plot(loads=loads, gps_loc=gps_loc, 
-                                            times=[time], N=N, fig_path=fig_path, 
-                                            shape=(1,1), filename='mixture.png',
-                                            title='')
+    figure_functions.interpolation(loads=loads, gps_loc=gps_loc, time=time,
+                                   fig_path=fig_path, show_fig=show_fig)
 
-    fig, ax = figure_functions.surface_plot(loads=loads, gps_loc=gps_loc, time=time, 
-                                            fig_path=fig_path)
+    figure_functions.triangular_grid(loads=loads, gps_loc=gps_loc, time=time,
+                                     fig_path=fig_path, show_fig=show_fig)
 
-    fig, ax = figure_functions.interpolation(loads=loads, gps_loc=gps_loc, time=time,
-                                             N=N, fig_path=fig_path)
+    figure_functions.contour_plot(loads=loads, gps_loc=gps_loc, time=time,
+                                  fig_path=fig_path, show_fig=show_fig)
 
-    fig, ax = figure_functions.triangular_grid(loads=loads, gps_loc=gps_loc, time=time,
-                                               N=N, fig_path=fig_path)
+    figure_functions.voronoi(gps_loc=gps_loc, fig_path=fig_path, show_fig=show_fig)
 
-    fig, ax = figure_functions.contour_plot(loads=loads, gps_loc=gps_loc, time=time,
-                                            title='', 
-                                            N=N, filename='contour.png', fig_path=fig_path, 
-                                            contours=10)
+    figure_functions.spatial_heterogeneity(loads=loads, time=time,
+                                           fig_path=fig_path, show_fig=show_fig)
 
-    fig, ax = figure_functions.voronoi(gps_loc=gps_loc, N=N, fig_path=fig_path)
-    
-    fig, ax = figure_functions.spatial_heterogeneity(loads=loads, time=time, 
-                                                     N=N, fig_path=fig_path)
+    figure_functions.temporal_heterogeneity(loads=loads, fig_path=fig_path,
+                                            show_fig=show_fig)
 
-    fig, ax = figure_functions.temporal_heterogeneity(loads=loads, time=time, 
-                                                      P=P, fig_path=fig_path)
+    figure_functions.temporal_day_plots(loads=loads, fig_path=fig_path,
+                                        show_fig=show_fig)
 
-    fig, ax = figure_functions.temporal_day_plots(loads=loads, P=P, fig_path=fig_path)
+    figure_functions.temporal_hour_plots(loads=loads, fig_path=fig_path,
+                                         show_fig=show_fig)
 
-    fig, ax = figure_functions.temporal_hour_plots(loads=loads, fig_path=fig_path)
+    figure_functions.model_selection(loads=loads, gps_loc=gps_loc,
+                                     fig_path=fig_path, show_fig=show_fig)
+
+    figure_functions.mixture_plot(loads=loads, gps_loc=gps_loc, times=time,
+                                  fig_path=fig_path, num_comps=num_comps,
+                                  show_fig=show_fig)
+
+    figure_functions.create_animation(loads=loads, gps_loc=gps_loc,
+                                      fig_path=fig_path,
+                                      animation_path=animation_path,
+                                      num_comps=num_comps)
 
 
 def gmm_simulations(park_data, gps_loc, times, k, p_value, fig_path, results_path):
