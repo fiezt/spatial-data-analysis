@@ -1,5 +1,4 @@
 import numpy as np
-import pickle
 import os
 import pandas as pd
 from collections import defaultdict
@@ -7,8 +6,13 @@ import scipy.stats as st
 
 
 def get_area_weights(train_active_index, N, data_path=os.getcwd() + '/../data'):
-    """
+    """Get the weight matrix for Moran I by using the paid area connections.
 
+    :param train_active_index: Numpy array of the active block-face keys.
+    :param N: Integer number of samples (locations).
+    :param data_path: File path to the paystation_info.csv.
+
+    :return weights: Numpy array of the weight matrix.
     """
 
     weights = np.zeros((N, N))
@@ -40,15 +44,19 @@ def get_area_weights(train_active_index, N, data_path=os.getcwd() + '/../data'):
         weights[i, area_dict[key_dict[train_active_index[i]]]] = 1
 
     di = np.diag_indices(N)
-
     weights[di] = 0
 
     return weights
 
 
 def moran_area(x, train_active_index, N):
-    """
+    """Calculating the Moran I using the paid area weight matrix.
 
+    :param x: Numpy array of the loads.
+    :param train_active_index: Numpy array of the active block-face keys.
+    :param N: Integer number of samples (locations).
+
+    :return I: Float of Moran I.
     """
 
     weights = get_area_weights(train_active_index, N)
@@ -64,13 +72,15 @@ def moran_area(x, train_active_index, N):
     return I
 
 
-def get_adjacent_weights(gps_loc, N, k=5):
-    """Get the weight matrix for Moran I by using adjacent connections.
-    
-    :param N: Integer number of samples (locations).
-    :param path: File path to the data about neighboring blocks.
+def get_neighbor_weights(gps_loc, N, k):
+    """Get the weight matrix for Moran I by using k nearest neighbor connections.
 
-    :return weights: Numpy array weight matrix.
+    :param gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
+    :param N: Integer number of samples (locations).
+    :param k: Integer number of neighbors to use for the weighting matrix.
+
+    :return weights: Numpy array of the weight matrix.
     """
 
     weights = np.zeros((N, N))
@@ -82,19 +92,19 @@ def get_adjacent_weights(gps_loc, N, k=5):
     return weights
 
 
-def moran_adjacent(x, gps_loc, N, k):
-    """Find the Moran I using the adjacent weight matrix.
+def moran_neighbor(x, gps_loc, N, k):
+    """Calculating the Moran I using the neighbor weight matrix.
 
-    :param x: Numpy array of the variable of interest.
-    :param block_keys: List of ordered block key identifiers.
+    :param x: Numpy array of the loads.
+    :param gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
     :param N: Integer number of samples (locations).
-    :param path: The path to the location of the adjacency information.
-    :param weight_func: Function to get the weights for Moran's I.
+    :param k: Integer number of neighbors to use for the weighting matrix.
 
-    :return I: Moran I.
+    :return I: Float of Moran I.
     """
 
-    weights = get_adjacent_weights(gps_loc, N, k)
+    weights = get_neighbor_weights(gps_loc, N, k)
 
     W = weights.sum()
     z = x - x.mean()
@@ -110,12 +120,11 @@ def moran_adjacent(x, gps_loc, N, k):
 def get_mixture_weights(train_labels, N):
     """Calculate the Moran I weight matrix using the mixture connections.
 
-    This function creates an adjacency matrix where each row represents a 
-    block and if a block is in the same mixture component as another it has 
-    a 1 in the corresponding column.
+    This function creates an weight matrix where each row represents a
+    block-face and if a block-face is in the same mixture component as another
+    it has a 1 in the corresponding column. The diagonal is 0.
     
-    :param train_labels: Numpy array like containing class label for each data 
-    point in x.
+    :param train_labels: Numpy array containing label for each data point.
     :param N: Integer number of samples (locations).
 
     :return weights: Numpy array of the weight matrix.
@@ -129,25 +138,19 @@ def get_mixture_weights(train_labels, N):
         weights[i, matching] = 1
 
     di = np.diag_indices(N)
-
     weights[di] = 0
 
     return weights
 
 
 def moran_mixture(x, train_labels, N):
-    """Calculating the Moran I autocorrelation for the mixture model weights.
+    """Calculating the Moran I using the mixture model weight matrix.
 
-    The weight matrix is used by giving weight 1 at the column index if the
-    column has the same label as the row index does. All other weights are 
-    set to 0, and the diagonal is set to 0. The variable of interest is then x.
-
-    :param x: Numpy array of the variable of interest.
-    :param train_labels: Numpy array like containing class label for each data 
-    point in x.
+    :param x: Numpy array of the loads.
+    :param train_labels: Numpy array containing label for each data point.
     :param N: Integer number of samples.
 
-    :return I: float of Moran I autocorrelation.
+    :return I: Float of Moran I.
     """
 
     weights = get_mixture_weights(train_labels, N)
@@ -158,21 +161,17 @@ def moran_mixture(x, train_labels, N):
     top = sum(weights[i,j]*z[i]*z[j] for i in xrange(N) for j in xrange(N)) 
     bottom = np.dot(z.T, z)
 
-    try:
-        I = (N/W) * top/bottom
-    except:
-        print('Value is none')
-        I = None
+    I = (N/W) * top/bottom
 
     return I
 
 
 def moran_expectation(N):
-    """Calculate the expected value of Moran's I.
+    """Calculate the expected value of the Moran I.
 
     :param N: Integer number of samples (locations).
 
-    :return expectation: Float of the expectation of Moran's I.
+    :return expectation: Float of expectation of Moran I.
     """
 
     expectation = -1./(N - 1.)
@@ -183,11 +182,11 @@ def moran_expectation(N):
 def moran_variance(x, w, N):
     """Calculating the variance of the Moran I.
     
-    :param x: Numpy array of the variable of interest.
+    :param x: Numpy array of the loads.
     :param w: Numpy array of the weight matrix.
     :param N: Integer number of samples (locations).
 
-    :return var: Variance of the Moran I.
+    :return var: Float of variance of Moran I.
     """
 
     W = w.sum()
@@ -212,11 +211,11 @@ def moran_variance(x, w, N):
 def z_score(I, expectation, variance):
     """Calculate the z-score for the Moran I.
     
-    :param I: Moran I.
-    :param expectation: Expectation of Moran I.
-    :param variance: Variance of Moran I.
+    :param I: Float of Moran I.
+    :param expectation: Float of expectation of Moran I.
+    :param variance: Float of variance of Moran I.
 
-    :return z: z-score for the Moran I.
+    :return z: Float of z-score for the Moran I.
     """
 
     z = (I - expectation)/np.sqrt(variance)
@@ -227,9 +226,9 @@ def z_score(I, expectation, variance):
 def p_value(z):
     """Calculating the one and two sided p-value for the Moran z-score.
     
-    :param z: Float z score of the Moran I.
+    :param z: Float of z-score for the Moran I.
 
-    :return p_one_sided, p_two_sided: one sided and two sided p values.
+    :return p_one_sided, p_two_sided: Float of one sided and two sided p values.
     """
 
     p_one_sided = st.norm.sf(abs(z)) 

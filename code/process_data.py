@@ -7,11 +7,24 @@ import datetime
 from pandas.tseries.holiday import USFederalHolidayCalendar
 
 
-def load_data_new(data_path, load_paths, verbose=True):
-    """Process loads 
+def load_data(data_path, load_paths, verbose=False):
+    """Process files with load data for block-faces to be used for further analysis.
     
-    :param data_path:
-    :param load_paths: 
+    :param data_path: Path ti directory containing blockface_locs.p and block_info.csv
+    :param load_paths: Path to directory containing load data for block-faces
+    or list of paths to directories containing load data for block-faces.
+    :param verbose: Bool indicator of whether to print info about blocks that are skipped.
+
+    :return element_keys: List containing the keys of block-faces with load data.
+    :return avg_loads: Numpy array where each row is the load data for a block-face
+    and each column corresponds to a day of week and hour.
+    :return gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
+    :return park_data: Multi-index DataFrame containing datetimes in the first
+    level index and block-face keys in the second level index. Values include
+    the corresponding loads.
+    :return idx_to_day_hour: Dictionary of column in avg_loads to (day, hour) pair.
+    :return day_hour_to_idx: Dictionary of (day, hour) pair to column in avg_loads.
     """
     
     # Load file containing GPS coordinates for blockfaces.
@@ -39,20 +52,11 @@ def load_data_new(data_path, load_paths, verbose=True):
     holidays = cal.holidays(start='2012-01-01', end=datetime.datetime.now().date()).to_pydatetime()
     holidays = [hol.date() for hol in holidays]
 
-
-    # To contain average loads at each day of week and hour of day for each block.
     avg_loads = []
-
-    # To contain GPS midpoint for each blockface.
     gps_loc = []
-
-    # To hold list of all element keys whose data are processed.
     element_keys = []
-
-    # To be converted to dataframe containing occupancy information.
     park_data = {}
     
-    # Convert path to list if only a single path is provided.
     if isinstance(load_paths, list):
         pass
     else:
@@ -94,12 +98,13 @@ def load_data_new(data_path, load_paths, verbose=True):
                     print('Skipping block %d because the supply is always 0.' % key)
                 continue
 
+            # If the block always has 0 occupancy, skip it.
             if len(block_data.loc[block_data['Load'] != 0]) == 0:
                 if verbose:
                     print('Skipping block %d because the occupancy is always 0.' % key)
                 continue
 
-            # Get GPS midpoint for blockface and skip if no information for it.
+            # Get GPS midpoint for block-face and skip if no information for it.
             if key in locations:
                 curr_block = locations[key]
 
@@ -114,7 +119,7 @@ def load_data_new(data_path, load_paths, verbose=True):
                     print('Skipping block %d because it was not found in locations.' % key)
                 continue
 
-            # Getting blockface info for the current key about hours of operation.
+            # Getting block-face info for the current key about hours of operation.
             curr_block_info = block_info.loc[block_info['ElementKey'] == key]
 
             # Filling times where paid parking is not allowed for the block with nan.
@@ -207,9 +212,6 @@ def load_data_new(data_path, load_paths, verbose=True):
     idx_to_day_hour = {i*len(hours) + j:(days[i], hours[j]) for i in range(len(days)) 
                                                             for j in range(len(hours))}
     day_hour_to_idx = {v:k for k,v in idx_to_day_hour.items()}
-
-    P = len(idx_to_day_hour)
-    N = len(element_keys)
     
     for key in park_data:
         park_data[key] = park_data[key].set_index('Datetime')
@@ -222,4 +224,4 @@ def load_data_new(data_path, load_paths, verbose=True):
     # Making the first index the date, and the second the element key, sorted by date.
     park_data = park_data.swaplevel(0, 1).sort_index()
 
-    return element_keys, avg_loads, gps_loc, park_data, N, P, idx_to_day_hour, day_hour_to_idx
+    return element_keys, avg_loads, gps_loc, park_data, idx_to_day_hour, day_hour_to_idx

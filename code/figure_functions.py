@@ -164,7 +164,7 @@ def surface_plot(loads, gps_loc, time, fig_path, filename='surface.png', show_fi
     :param gps_loc: Numpy array with each row containing the lat, long pair 
     midpoints for a block-face.
     :param time: Integer column index to get the load data from.
-    :param fig_path: Path to save the image to.
+    :param fig_path: Path to save the image to and retrieve background image from.
     :param filename: Name to save the image as.
     :param show_fig: Bool indicating whether to show the image.
     """
@@ -225,7 +225,7 @@ def interpolation(loads, gps_loc, time, fig_path, filename='interpolation.png', 
     :param gps_loc: Numpy array with each row containing the lat, long pair
     midpoints for a block-face.
     :param time: Integer column index to get the load data from.
-    :param fig_path: Path to save the image to.
+    :param fig_path: Path to save the image to and retrieve background image from.
     :param filename: Name to save the image as.
     :param show_fig: Bool indicating whether to show the image.
     """
@@ -320,7 +320,7 @@ def triangular_grid(loads, gps_loc, time, fig_path, filename='triangle.png', sho
     :param gps_loc: Numpy array with each row containing the lat, long pair
     midpoints for a block-face.
     :param time: Integer column index to get the load data from.
-    :param fig_path: Path to save the image to.
+    :param fig_path: Path to save the image to and retrieve background image from.
     :param filename: Name to save the image as.
     :param show_fig: Bool indicating whether to show the image.
     """
@@ -410,7 +410,7 @@ def contour_plot(loads, gps_loc, time, fig_path, contours=10, filename='contours
     :param gps_loc: Numpy array with each row containing the lat, long pair
     midpoints for a block-face.
     :param time: Integer column index to get the load data from.
-    :param fig_path: Path to save the image to.
+    :param fig_path: Path to save the image to and retrieve background image from.
     :param contours: Integer number of contour levels to use for contour plot.
     :param filename: Name to save the image as.
     :param show_fig: Bool indicating whether to show the image.
@@ -912,7 +912,7 @@ def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
     :param gps_loc: Numpy array with each row containing the lat, long pair
     midpoints for a block-face.
     :param times: List or integer of column index(es) to get the load data from.
-    :param fig_path: Path to save the image to.
+    :param fig_path: Path to save the image to and retrieve background image from.
     :param num_comps: Integer number of mixture components for the model.
     :param default_means: Numpy array, each row containing an array of the
     lat and long to use as the default mean so colors will stay the same
@@ -1037,10 +1037,10 @@ def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
             # Getting the ellipses for the 1st and 2nd standard deviations.
             for j in [1, 2]:
 
-                # Converting mean in gps coords to pixel positions.
+                # Converting mean in GPS coords to pixel positions.
                 xy = mp.to_image_pixel_position(list(means[i, :]))
 
-                # Width and height of the ellipses in gps coords.
+                # Width and height of the ellipses in GPS coords.
                 width = lambda_[0]*j*2
                 height = lambda_[1]*j*2 
 
@@ -1060,7 +1060,7 @@ def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
 
                 ellipse_num += 1
 
-        # Converting the centroids to pixel positions from gps coords.
+        # Converting the centroids to pixel positions from GPS coords.
         pix_means = np.array([mp.to_image_pixel_position(list(means[i, :])) for i in xrange(len(means))])
 
         # Updating the centroids for the animations.
@@ -1094,12 +1094,11 @@ def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
     plt.close()
 
  
-def centroid_plots(means, gps_loc, times, fig_path, num_comps=4, 
+def centroid_plots(centers, gps_loc, times, fig_path, num_comps,
                    shape=None, filename='centroid_plot.png', show_fig=False):
-    
     """Plotting the centroids from different dates at the same weekday and hour.
 
-    This function takes in a parameter, means, which is a list of list of numpy 
+    This function takes in a parameter, centers, which is a list of list of numpy
     arrays in which each numpy array in the inner list contains a set of 
     centroids from the Gaussian mixture modeling procedure for a particular date
     and the inner list represents a particular day of the week and hour of the
@@ -1109,53 +1108,44 @@ def centroid_plots(means, gps_loc, times, fig_path, num_comps=4,
     at the locations they are. Each cluster is colored differently to indicate
     the cluster difference.
     
-    :param means: List of list of numpy arrays, with each outer list containing
+    :param centers: List of list of numpy arrays, with each outer list containing
     and inner list which contains a list of numpy arrays where each numpy array
     in the inner lists contains a 2-d array that contains each of the centroids
     for a GMM fit of a particular date for the weekday and hour.
-    :param gps_loc: Numpy array with each row containing the lat, long pair 
-    midpoints for a block.
-    :param N: Integer number of samples (locations).
-    :param times: List of indexes to get the load data from.
-    :param fig_path: Path to save file plot to and read background image from.
+    :param gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
+    :param times: List or integer of column index(es) to get the load data from.
+    :param fig_path: Path to save image to and retrieve background image from.
     :param num_comps: Integer number of mixture components for the model.
     :param shape: Tuple of the row and col dimension of subplots.
     :param filename: Name to save the file as.
-    :param title: Title for the figure.
-
-    :return fig, ax: Matplotlib figure and axes objects.
+    :param show_fig: Bool indicating whether to show the image.
     """
 
-    upleft, bttmright, imgsize, fig_name = setup_image()
+    up_left, bottom_right, img_size, fig_name = setup_image()
 
-    mp = MapOverlay(upleft, bttmright, imgsize)
+    mp = MapOverlay(up_left, bottom_right, img_size)
 
-    # Converting the gps locations to pixel positions.
+    # Translating GPS coordinates to pixel positions.
     pix_pos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in xrange(len(gps_loc))])
 
-    # Setting center of image.
-    center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
-    pix_center = mp.to_image_pixel_position(list(center))
-
-    P = len(means)
+    num_times = len(centers)
     
     if isinstance(times, list):
         num_figs = len(times)
     else:
         num_figs = 1
     
-    if shape == None:
+    if shape is None:
         fig = plt.figure(figsize=(18*num_figs, 16))
         fs = 35
-        fs_x = 35
     else:
         fig = plt.figure(figsize=(18*shape[1], 16*shape[0]))
         fs = 35
-        fs_x = 35
-    
+
     for fig_count in xrange(1, num_figs+1):
         
-        if shape == None:
+        if shape is None:
             ax = fig.add_subplot(1, num_figs, fig_count)
         else:
             ax = fig.add_subplot(shape[0], shape[1], fig_count)
@@ -1167,41 +1157,38 @@ def centroid_plots(means, gps_loc, times, fig_path, num_comps=4,
             time = times[fig_count-1]
         else:
             time = times
-        
+
+        im = imread(os.path.join(fig_path, fig_name))
+        ax.imshow(im)
         ax.invert_yaxis()
 
         ax.axes.get_xaxis().set_ticks([])
         ax.axes.get_yaxis().set_ticks([])
 
-        im = imread(os.path.join(fig_path, fig_name))
-        ax.imshow(im)
+        ax.xaxis.label.set_fontsize(fs)
 
-        # Clustering the centroids.
-        data = np.vstack((means[time]))
+        # Getting the data, clustering the centroids, and getting class labels.
+        data = np.vstack((centers[time]))
         kmeans = KMeans(n_clusters=num_comps, n_init=50).fit(data)
         labels = kmeans.labels_.tolist()
 
-        # Converting the centroid locations to pixel positions.
+        # Translating the centroid GPS coordinates to pixel positions.
         data_pix_pos = np.array([mp.to_image_pixel_position(list(data[i, :])) for i in xrange(len(data))])
 
         # Adding in the centroids to the map as points.
         scatter = ax.scatter(data_pix_pos[:, 0], data_pix_pos[:, 1], s=500, color='red', edgecolor='black')
 
-        ax.xaxis.label.set_fontsize(fs_x)
-
-        days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
-
         if num_comps == 4:
             colors = ['deeppink', 'lawngreen', 'blue', 'aqua']
         else:
-            colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0,1,num_comps)]
+            colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0, 1, num_comps)]
 
         # Setting the centroid colors to be the same within a cluster.
         scatter.set_color([colors[labels[i]] for i in xrange(len(labels))])
         scatter.set_edgecolor(['black' for i in xrange(len(labels))])
 
-        hour = 8 + (time % (P/6))
-        day = time/(P/6)
+        hour = 8 + (time % (num_times/6))
+        day = time/(num_times/6)
 
         if hour < 12:
             hour = str(hour) + ':00 AM'
@@ -1209,28 +1196,30 @@ def centroid_plots(means, gps_loc, times, fig_path, num_comps=4,
             hour = str(hour) + ':00 PM'
         else:
             hour = str(hour - 12) + ':00 PM'
-            
+
+        days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
         ax.set_xlabel(days[day] + ' ' + hour)
 
     fig.tight_layout()
-    fig.suptitle(title, fontsize=fs)
 
-    if shape[0] > 1 and shape[1] == 1:
+    if shape is not None and shape[0] > 1 and shape[1] == 1:
         plt.subplots_adjust(top=0.975)
     else:
         plt.subplots_adjust(top=0.98)
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
-    
-    return fig, ax
+
+    if show_fig:
+        plt.show()
+
+    plt.close()
 
 
 def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path, 
-                    shape=None, filename='centroid_radius.png', 
-                    title=''):
+                    shape=None, filename='centroid_radius.png', show_fig=False):
     """Plotting centroids at a time and date and circle around each.
 
-    The input of the centroids are the centroids of all the centroids that 
+    The input of the centroids are the centroids of all the centers that
     were found by the locational demand analysis function in figure_functions.py.
     The mean distance to these centroids are then used as the radius of the 
     circle that is plotted around each centroid. 
@@ -1242,50 +1231,38 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
     the number of times the centroids were found for, the second dimension the 
     number of centroids at the time, the third dimension the points for the 
     circle with the last dimension each point in GPS coords.
-    :param gps_loc: Numpy array with each row containing the lat, long pair 
-    midpoints for a block.
-    :param times: List of indexes to get the load data from.
-    :param fig_path: Path to save file plot to and read background image from.
-    :param num_comps: Integer number of mixture components for the model.
+    :param gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
+    :param times: List or integer of column index(es) to get the load data from.
+    :param fig_path: Path to save the image to and retrieve background image from.
     :param shape: Tuple of the row and col dimension of subplots.
-    :param filename: Name to save the file as.
-    :param title: Title for the figure.
-
-    :return fig, ax: Matplotlib figure and axes objects.
+    :param filename: Name to save the image as.
     """
 
-    upleft, bttmright, imgsize, fig_name = setup_image()
+    up_left, bottom_right, img_size, fig_name = setup_image()
 
-    mp = MapOverlay(upleft, bttmright, imgsize)
+    mp = MapOverlay(up_left, bottom_right, img_size)
 
-    N = gps_loc.shape[0]
-    P = centroids.shape[0]
+    num_times = centroids.shape[0]
 
-    # Converting the gps locations to pixel positions.
-    pix_pos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in xrange(N)])
-
-    # Setting center of image.
-    center = ((upleft[0] - bttmright[0])/2., (upleft[1] - bttmright[1])/2.)
-    pix_center = mp.to_image_pixel_position(list(center))
-
+    # Translating GPS coordinates to pixel positions.
+    pix_pos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in xrange(len(gps_loc))])
 
     if isinstance(times, list):
         num_figs = len(times)
     else:
         num_figs = 1
 
-    if shape == None:
+    if shape is None:
         fig = plt.figure(figsize=(18*num_figs, 16))
         fs = 35
-        fs_x = 35
     else:
         fig = plt.figure(figsize=(18*shape[1], 16*shape[0]))
         fs = 35
-        fs_x = 35
 
     for fig_count in xrange(1, num_figs+1):
 
-        if shape == None:
+        if shape is None:
             ax = fig.add_subplot(1, num_figs, fig_count)
         else:
             ax = fig.add_subplot(shape[0], shape[1], fig_count)
@@ -1298,21 +1275,20 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
         else:
             time = times
 
+        im = imread(os.path.join(fig_path, fig_name))
+        ax.imshow(im)
         ax.invert_yaxis()
 
         ax.axes.get_xaxis().set_ticks([])
         ax.axes.get_yaxis().set_ticks([])
 
-        im = imread(os.path.join(fig_path, fig_name))
-        ax.imshow(im)
+        ax.xaxis.label.set_fontsize(fs)
 
-        ax.xaxis.label.set_fontsize(fs_x)
-
+        # Adding the centroids to the map.
         scatter_centroid = ax.scatter(centroids[0][:, 0], centroids[0][:, 1], s=500, 
                                       color='red', edgecolor='black')
 
-        days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
-
+        # Adding in the circle around each centroid having radius of average distance to centroid of all points.
         for comp in xrange(centroids.shape[1]):
             path = np.array([list(mp.to_image_pixel_position(all_time_points[time, comp, i])) 
                              for i in xrange(all_time_points.shape[2])])
@@ -1321,13 +1297,13 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
             
             ax.add_patch(poly)
 
-        # Converting the centroids to pixel positions from gps coords.
+        # Converting the centroids to pixel positions from GPS coords.
         pix_means = np.array([mp.to_image_pixel_position(list(centroids[time, i])) for i in xrange(centroids.shape[1])])
 
-        # Updating the centroids for the animations.
+        # Updating the centroid locations.
         scatter_centroid.set_offsets(pix_means)
 
-        hour = 8 + (time % (P/6))
+        hour = 8 + (time % (num_times/6))
         if hour < 12:
             hour = str(hour) + ':00 AM'
         elif hour == 12:
@@ -1335,12 +1311,12 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
         else:
             hour = str(hour - 12) + ':00 PM'
 
-        day = time/(P/6)
+        day = time/(num_times/6)
 
+        days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
         ax.set_xlabel(days[day] + ' ' + hour)
 
     fig.tight_layout()
-    fig.suptitle(title, fontsize=fs)
 
     if shape is not None and shape[0] > 1 and shape[1] == 1:
         plt.subplots_adjust(top=0.975)
@@ -1349,7 +1325,10 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
 
     plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
 
-    return fig, ax
+    if show_fig:
+        plt.show()
+
+    plt.close()
 
 
 def model_selection(loads, gps_loc, fig_path, show_fig=False):

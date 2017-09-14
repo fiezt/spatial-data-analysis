@@ -151,13 +151,16 @@ def get_block_load(date, transactions, key, supply):
     load = np.zeros([1, 60*24])
     percentage = np.zeros([1, 60*24])
 
+    # Find the number of transactions that start and stop at each minute.
     for i in range(len(data)):
         start[0, data[i][0]] += 1.0
         stop[0, min(data[i][0] + data[i][1], 1439)] += 1.0 
 
+    # Get the active number of transactions at each time.
     for j in range(1, 60*24):
         load[0, j] = load[0, j-1] + start[0, j] - stop[0, j] 
-    
+
+    # Normalize by the supply.
     if not ((supply == 0).any()):
         percentage[0, :] = 1.0*load[0, :]/supply
         
@@ -183,7 +186,8 @@ def get_loads(month, year, subarea, block_info, transactions, data_path):
   
     month_name = {1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun', 
                   7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'}
-    
+
+    # Creating directory for the loads to be written to if it does not exist.
     subarea_dir = data_path + '/' + subarea.translate(None, string.punctuation).replace(' ', '') + '_Minute'
     if not os.path.exists(subarea_dir):
         os.makedirs(subarea_dir)
@@ -204,14 +208,17 @@ def get_loads(month, year, subarea, block_info, transactions, data_path):
         for date in dates:
             curr_date = str(date.month) + '/' + str(date.day) + '/' + str(date.year)
 
+            # Getting the supply that was active at the current date.
             supply = get_supply(key, date, block_info)
 
+            # If the supply is not 0 calculate loads otherwise set loads to nan since block is closed.
             if supply:
                 block_load = get_block_load(curr_date, transactions, key, supply)
                 loads.append(block_load[0][0])
             else: 
                 loads.append(np.nan*np.ones(1440))
 
+        # Writing loads for block-face to file. Rows are minutes of day, cols are day of month.
         load_frame = pd.DataFrame(loads) 
         load_frame = load_frame.transpose()
         load_frame.columns = days
@@ -222,10 +229,11 @@ def get_loads(month, year, subarea, block_info, transactions, data_path):
 def create_loads(subareas, months, years, file_paths, data_path, verbose=False):
     """
 
-    :param subareas: List of subareas to get loads for.
+    :param subareas: List of subareas string names to get loads for.
     :param months: List of integer months to get loads for subareas.
     :param years: List of integer years corresponding to months to get loads for subareas.
-    :param file_paths: List of file paths to paid parking transaction month data.
+    :param file_paths: List of file paths to paid parking transaction month data
+    corresponding to month and years parameters.
     :param verbose: Bool indicating whether to print progress.
     """
 
@@ -243,12 +251,14 @@ def create_loads(subareas, months, years, file_paths, data_path, verbose=False):
             get_loads(month, year, subarea, block_info, transactions, data_path)
 
 
-def aggregate_loads(start_hour, end_hour, minute_interval, months, years, file_paths):
+def aggregate_loads(start_hour, end_hour, minute_interval, months_years, file_paths):
     """Aggregate loads to a new interval and write files for each key in sequential fashion.
     
     :param start_hour: Integer 0-23 of hour to start saving the load data at.
     :param end_hour: Integer 1-24 of hour to stop saving the load data at.
     :param minute_interval: Integer number of aggregate loads to, must be divisible by 60.
+    :param months_years: List of tuples of month (integer 1-12), year (integer) pairs
+    to use the load data from to do the aggregation.
     :param file_paths: List of directories where minute load data is for a subarea.
     """
 
@@ -283,7 +293,7 @@ def aggregate_loads(start_hour, end_hour, minute_interval, months, years, file_p
             date = date[:4] + '-' + date[4:]
             year, month = int(date.split('-')[0]), date.split('-')[1]
 
-            if year not in years or month_map[month] not in months:
+            if (month_map[month], year) not in months_years:
                 continue
 
             data = pd.read_csv(fi)

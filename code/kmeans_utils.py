@@ -2,41 +2,10 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 
-def get_time_scores(means):
-    """Getting the k-means score for each time of day and day of week provided.
-
-    :param means: List of list of numpy arrays, with each outer list containing
-    and inner list which contains a list of numpy arrays where each numpy array
-    in the inner lists contains 2-d arrays that contain each of the centroids
-    for a GMM fit of a particular date for the weekday and hour.
-
-    :return scores: List of tuples with the first item in each tuple being the 
-    index of the means provided, and the second item the k-means score. The 
-    tuples are sorted by the k-means score in descending order.
-    :return times: Sorted list of times, sorted by the kmeans score for the time.
-    """
-
-    scores = []
-    P = len(means)
-
-    for time in xrange(P):
-        data = np.vstack((means[time]))
-
-        kmeans = KMeans(n_clusters=4).fit(data)
-        labels = kmeans.labels_.tolist()
-
-        scores.append((time, kmeans.score(data)))
-    
-    scores = sorted(scores, key=lambda x: x[1], reverse=True)
-    times = [score[0] for score in scores]
-
-    return scores, times
-
-
-def get_distances(means, num_comps=4):
+def get_distances(centers, num_comps):
     """Find average distance between points in a cluster and the centroid.
 
-    This function takes in a parameter, means, which is a list of list of numpy 
+    This function takes in a parameter, centers, which is a list of list of numpy
     arrays in which each numpy array in the inner list contains a set of 
     centroids from the Gaussian mixture modeling procedure for a particular date
     and the inner list represents a particular day of the week and hour of the
@@ -45,7 +14,7 @@ def get_distances(means, num_comps=4):
     day combo are clustered. The average distance between the points in a 
     cluster and the centroid of a cluster for each cluster is returned for each time.
 
-    :param means: List of list of numpy arrays, with each outer list containing
+    :param centers: List of list of numpy arrays, with each outer list containing
     and inner list which contains a list of numpy arrays where each numpy array
     in the inner lists contains 2-d arrays that contain each of the centroids
     for a GMM fit of a particular date for the weekday and hour.
@@ -61,13 +30,15 @@ def get_distances(means, num_comps=4):
     all_time_dist = []
     all_time_centroids = []
     
-    for time in xrange(len(means)):
-        data = np.vstack((means[time]))
-        
+    for time in xrange(len(centers)):
+        data = np.vstack((centers[time]))
+
+        # Clustering the centroids, assigning labels, and getting centroids.
         kmeans = KMeans(n_clusters=num_comps, n_init=50).fit(data)
         labels = kmeans.labels_.tolist()  
         centroids = kmeans.cluster_centers_
-        
+
+        # The next block of code gets the distance from each point to each new centroid.
         current_time_dist = []
         current_time_centroids = []
 
@@ -95,7 +66,7 @@ def as_the_crow_flies_distance(point1, point2):
     :param point1: Tuple or list containing a latitude and longitude.
     :param point2: Tuple or list containing a latitude and longitude.
 
-    :return distance: As the crow flies distance in meters between the two points.
+    :return distance: Float as the crow flies distance in meters between the two points.
     """
 
     lat1 = np.deg2rad(point1[0])
@@ -136,10 +107,12 @@ def get_centroid_circle_paths(distances, centroids):
 
     all_time_points = []
 
+    # Getting the circle around the centroid for all times for all components.
     for i in xrange(centroids.shape[0]):
         
         curr_time_points = []
-        
+
+        # Getting the destination points for each component at the given time.
         for j in xrange(centroids.shape[1]):
             lat = centroids[i, j, 0]
             lon = centroids[i, j, 1]
@@ -151,8 +124,8 @@ def get_centroid_circle_paths(distances, centroids):
 
             points = []
 
-            # Finding the destination point given distance and bearing from start point.
-            for k in np.arange(0,360, 4):
+            # Finding the destination poinst given distance and bearing from start point.
+            for k in np.arange(0, 360, 4):
                 theta = np.deg2rad(k)
 
                 lat_r = np.deg2rad(lat)
