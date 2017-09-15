@@ -201,7 +201,7 @@ def load_data(data_path, load_paths, verbose=False):
     avg_loads = np.vstack((avg_loads))
     gps_loc = np.vstack((gps_loc))
 
-    index = park_data[key].groupby(['Day', 'Hour']).sum().index
+    index = park_data[park_data.keys()[0]].groupby(['Day', 'Hour']).sum().index
 
     days = index.get_level_values(0).unique().values
     days = np.sort(days)

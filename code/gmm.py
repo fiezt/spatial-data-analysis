@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def locational_demand_analysis(park_data, gps_loc, num_comps, k):
+def locational_demand_analysis(park_data, gps_loc, num_comps, k, verbose=True):
     """Find GMM consistency and spatial autocorrelation at each day of the week and time of day.
 
     This function finds the consistency of the GMM fit over time and also
@@ -24,6 +24,7 @@ def locational_demand_analysis(park_data, gps_loc, num_comps, k):
     midpoints for a block-face.
     :param num_comps: Integer number of mixture components for the model.
     :param k: Integer number of neighbors to use for the Moran weighting matrix.
+    :param verbose: Bool indicator of whether to print progress.
 
     :return results: List of tuples with each tuple containing the day of week 
     as an integer, integer hour of the day, consistency measure, Moran parameters
@@ -40,7 +41,7 @@ def locational_demand_analysis(park_data, gps_loc, num_comps, k):
 
     pool = multiprocessing.Pool()
 
-    func = functools.partial(locational_demand_one_time, park_data, gps_loc, times, num_comps, k)
+    func = functools.partial(locational_demand_one_time, park_data, gps_loc, times, num_comps, k, verbose)
     results = pool.map(func, range(len(times)))
 
     pool.close()
@@ -49,7 +50,7 @@ def locational_demand_analysis(park_data, gps_loc, num_comps, k):
     return results
 
 
-def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, iteration):
+def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, verbose, iteration):
     """Find GMM consistency and spatial autocorrelation at one day of the week and time of day.
 
     This function finds the consistency of the GMM fit over time and also
@@ -95,6 +96,9 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, iteratio
     time = times[iteration]
     day = time[0]
     hour = time[1]
+
+    if verbose:
+        print('Starting day %d and hour %d' % (day, hour))
 
     # Getting the data for the current day and hour combination.
     data_df = park_data.loc[(park_data['Day'] == day) & (park_data['Hour'] == hour)]
@@ -221,5 +225,8 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, iteratio
 
     # Average consistency for the particular day and hour combination.
     time_avg_consistency = round(np.array(average_consistencies).mean() * 100, 2)
+
+    if verbose:
+        print('Finished day %d and hour %d' % (day, hour))
 
     return day, hour, time_avg_consistency, morans_mixture, morans_area, morans_neighbor, centers

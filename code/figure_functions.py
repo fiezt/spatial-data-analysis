@@ -22,6 +22,7 @@ from map_overlay import MapOverlay
 import seaborn as sns
 sns.reset_orig()
 
+"""
 # GPS coordinates of upper left corner of the image.
 background_up_left = [47.6197793, -122.3592749]
 
@@ -33,18 +34,21 @@ background_img_size = [1135, 864]
 
 # Background figure to overlay on. Must be in figure directory.
 background_fig_name = 'belltown.png'
+"""
 
 """
-background_up_left = [47.619266, -122.358031]
-background_bottom_right = [47.601475, -122.311733]
-background_img_size = [888, 502]
-background_fig_name = 'seattle.png'
+background_up_left = [47.619062, -122.358414]
+background_bottom_right = [47.608167, -122.328308]
+background_img_size = [1403, 745]
+background_fig_name = 'seattle_medium.png'
+"""
+
 
 background_up_left = [47.618721, -122.357463]
 background_bottom_right = [47.601608, -122.312430]
 background_img_size = [1769, 996]
-background_fig_name = 'seattle2.png'
-"""
+background_fig_name = 'seattle_big.png'
+
 
 
 def setup_image():
@@ -102,8 +106,7 @@ def plot_neighborhoods(element_keys, data_path, fig_path, filename='neighborhood
             if area not in area_dict:
                 area_dict[area] = next(colors)
         else:
-            if not area_dict:
-                continue
+            continue
 
         gmap.plot([lat1, lat2], [lon1, lon2], color=area_dict[area], edge_width=4)
 
@@ -147,8 +150,7 @@ def plot_paid_areas(element_keys, data_path, fig_path, filename='paidarea_map.ht
             if area not in area_dict:
                 area_dict[area] = next(colors)
         else:
-            if not area_dict:
-                continue
+            continue
 
         gmap.plot([lat1, lat2], [lon1, lon2], color=area_dict[area], edge_width=4)
 
