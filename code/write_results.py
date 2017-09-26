@@ -18,16 +18,16 @@ def write_gmm_results(consistencies, results_path):
         
         day_count = 0
         for day in consistencies:
-            day_consistencies = [str(measure) + '% & ' for measure in day]
-            day_consistencies.append(str(round(day_avg[day_count], 2)) + '% \\\ \n')
+            day_consistencies = [str(measure) + '\% & ' for measure in day]
+            day_consistencies.append(str(round(day_avg[day_count], 2)) + '\% \\\ \n')
             day_consistencies = ''.join(day_consistencies)
             
             f.write(day_consistencies)
             
             day_count += 1
         
-        hour_consistencies = [str(round(hour_avg[i], 2)) + '% & ' for i in xrange(len(hour_avg)-1)]
-        hour_consistencies.append(str(round(hour_avg[-1], 2)) + '% \\\ \n')
+        hour_consistencies = [str(round(hour_avg[i], 2)) + '\% & ' for i in xrange(len(hour_avg)-1)]
+        hour_consistencies.append(str(round(hour_avg[-1], 2)) + '\% \\\ \n')
         hour_consistencies = ''.join(hour_consistencies)
         
         f.write(hour_consistencies)

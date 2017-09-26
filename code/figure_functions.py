@@ -8,6 +8,7 @@ from matplotlib import cm
 from matplotlib import animation 
 from matplotlib.colors import LightSource
 from mpl_toolkits.mplot3d import Axes3D
+import random
 import os
 import pickle
 import gmplot
@@ -22,7 +23,7 @@ from map_overlay import MapOverlay
 import seaborn as sns
 sns.reset_orig()
 
-"""
+
 # GPS coordinates of upper left corner of the image.
 background_up_left = [47.6197793, -122.3592749]
 
@@ -34,22 +35,34 @@ background_img_size = [1135, 864]
 
 # Background figure to overlay on. Must be in figure directory.
 background_fig_name = 'belltown.png'
+
+"""
+background_up_left = [47.619223, -122.358267]
+background_bottom_right = [47.609014, -122.327686]
+background_img_size = [950, 471]
+background_fig_name = 'belltown_denny.png'
 """
 
 """
-background_up_left = [47.619062, -122.358414]
-background_bottom_right = [47.608167, -122.328308]
-background_img_size = [1403, 745]
-background_fig_name = 'seattle_medium.png'
+background_up_left = [47.619079, -122.357970]
+background_bottom_right = [47.601924, -122.326902]
+background_img_size = [804, 667]
+background_fig_name = 'belltown_commcore.png'
 """
 
+"""
+background_up_left = [47.632731, -122.359002]
+background_bottom_right = [47.609126, -122.324917]
+background_img_size = [693, 716]
+background_fig_name = 'belltown_denny_uptown_union.png'
+"""
 
-background_up_left = [47.618721, -122.357463]
-background_bottom_right = [47.601608, -122.312430]
-background_img_size = [1769, 996]
-background_fig_name = 'seattle_big.png'
-
-
+"""
+background_up_left = [47.633412, -122.350718]
+background_bottom_right = [47.612768, -122.324845]
+background_img_size = [636, 748]
+background_fig_name = 'denny_uptown_union.png'
+"""
 
 def setup_image():
     """Specifying parameters of image to overlay plots on.
@@ -89,8 +102,8 @@ def plot_neighborhoods(element_keys, data_path, fig_path, filename='neighborhood
 
     all_keys = area_info['ELMNTKEY'].unique().tolist()
 
-    colors = iter(['b', 'g', 'r', 'm', 'k', 'orange', 'deepskyblue', 
-                   'purple', 'firebrick', 'darkcyan', 'gold', 'limegreen', 'gray'])
+    colors = iter(['navy', 'orangered', 'g', 'r', 'm', 'k', 'orange', 'teal',
+                   'purple', 'firebrick', 'gold', 'limegreen', 'gray'])
 
     area_dict = {}
 
@@ -131,8 +144,8 @@ def plot_paid_areas(element_keys, data_path, fig_path, filename='paidarea_map.ht
     area_info = area_info[['ELMNTKEY', 'PAIDAREA', 'SUBAREA']]
     all_keys = area_info['ELMNTKEY'].unique().tolist()
 
-    colors = iter(['b', 'g', 'r', 'm', 'k', 'orange', 'deepskyblue', 
-                   'purple', 'firebrick', 'darkcyan', 'gold', 'limegreen', 'gray'])
+    colors = iter(['navy', 'orangered', 'g', 'm', 'k', 'orange', 'teal',
+                   'purple', 'firebrick', 'gold', 'limegreen', 'gray'])
 
     area_dict = {}
 
@@ -154,7 +167,6 @@ def plot_paid_areas(element_keys, data_path, fig_path, filename='paidarea_map.ht
 
         gmap.plot([lat1, lat2], [lon1, lon2], color=area_dict[area], edge_width=4)
 
-                
     gmap.draw(os.path.join(fig_path, filename))
 
 
@@ -808,7 +820,7 @@ def temporal_day_plots(loads, fig_path, filename='temporal_day_plots.png', show_
         plt.bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
 
         plt.xlim([min(bins), max(bins)+1])
-        plt.ylim([0, 80])
+        plt.ylim([0, 70])
         
         day_count += 1
 
@@ -879,7 +891,7 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots.png', sho
         
         plt.bar(bins, counts, color='red', align='center')
 
-        plt.ylim([0, 80])
+        plt.ylim([0, 70])
         
         hour_count += 1
         
@@ -896,8 +908,8 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots.png', sho
 
 
 def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
-                 default_means=np.array([[47.61337195, -122.34394369], [47.6144188, -122.34992362],
-                                         [47.61707117, -122.34971354], [47.61076144, -122.34305349]]),
+                 default_means=np.array([[47.61774778, -122.35013085], [47.6133535, -122.34369815],
+                                         [47.61506114, -122.34803596], [47.61522087, -122.35059538]]),
                  shape=None, filename='mixture_plot.png', show_fig=False):
     """Plotting the mixture model results at a time or times of day.
 
@@ -947,7 +959,7 @@ def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
         fs = 35
     else:
         fig = plt.figure(figsize=(18*shape[1], 16*shape[0]))
-        fs = 35
+        fs = 70
     
     for fig_count in xrange(1, num_figs+1):
         
@@ -956,8 +968,8 @@ def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
         else:
             ax = fig.add_subplot(shape[0], shape[1], fig_count)
             
-        ax.set_xlim((min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100))
-        ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+        ax.set_xlim((min(pix_pos[:, 0])-50, max(pix_pos[:, 0])+50))
+        ax.set_ylim((min(pix_pos[:, 1])-50, max(pix_pos[:, 1])+50))
         
         if isinstance(times, list):
             time = times[fig_count-1]
