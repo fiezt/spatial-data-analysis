@@ -7,3 +7,8 @@
 /Users/tfiez/GitHub/spatial-data-analysis/results_belltown_k_5/
 /Users/tfiez/GitHub/spatial-data-analysis/results_belltown_k_50/
 *.pyc
+test_ignore.py
+test.py
+locational_demand-Copy1.ipynb
+locational_demand-Copy2.ipynb
+locational_demand.ipynb
