@@ -1,4 +1,4 @@
-,Using Mixture Connections as Weights Matrix,Using Adjacent Connections as Weight Matrix
-Moran I Over All Days and Times,0.260734956772,0.000343403108614
-Significant One Sided P Value Percentage Average Over All Days And Times,99.7472222222,8.20819444444
-Significant Two Sided P Value Percentage Average Over All Days And Times,99.5577777778,3.33402777778
+,Using Mixture Connections as Weight Matrix,Using Paid Area Connections as Weight Matrix,Using Nearest Neighbor Connections as Weight Matrix
+Moran I Over All Days and Times,,,
+Significant One Sided P Value Percentage Average Over All Days And Times,99.8677777778,66.2404166667,97.9851388889
+Significant Two Sided P Value Percentage Average Over All Days And Times,99.8677777778,64.7068055556,97.0258333333

@@ -12,3 +12,5 @@ test.py
 locational_demand-Copy1.ipynb
 locational_demand-Copy2.ipynb
 locational_demand.ipynb
+RawTransactionData/
+*_Minute/
