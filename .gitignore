@@ -4,3 +4,4 @@ RawTransactionData/
 *_Minute/
 extra_code.ipynb
 create_data.ipynb
+.gitignore
