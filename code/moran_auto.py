@@ -5,7 +5,7 @@ from collections import defaultdict
 import scipy.stats as st
 
 
-def get_area_weights(train_active_index, N, data_path=os.getcwd() + '/../data'):
+def get_area_weights(train_active_index, N, data_path=os.path.join(os.getcwd(), '..', 'data')):
     """Get the weight matrix for Moran I by using the paid area connections.
 
     :param train_active_index: Numpy array of the active block-face keys.

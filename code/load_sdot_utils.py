@@ -188,7 +188,7 @@ def get_loads(month, year, subarea, block_info, transactions, data_path):
                   7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'}
 
     # Creating directory for the loads to be written to if it does not exist.
-    subarea_dir = data_path + '/' + subarea.translate(None, string.punctuation).replace(' ', '') + '_Minute'
+    subarea_dir = data_path + os.sep + subarea.translate(None, string.punctuation).replace(' ', '') + '_Minute'
     if not os.path.exists(subarea_dir):
         os.makedirs(subarea_dir)
 
@@ -265,9 +265,9 @@ def aggregate_loads(start_hour, end_hour, minute_interval, months_years, file_pa
     for path in file_paths:
         
         # Creating new directory to write new files to if it does not exist.
-        subarea_name = path.split('/')[-1].split('_')[0]
-        subdir = path + '/..'
-        new_dir = subdir + '/' + subarea_name
+        subarea_name = path.split(os.sep)[-1].split('_')[0]
+        subdir = path + os.sep + '..'
+        new_dir = subdir + os.sep + subarea_name
         
         if minute_interval == 1:
             dir_addon = '_Minute'
@@ -286,8 +286,8 @@ def aggregate_loads(start_hour, end_hour, minute_interval, months_years, file_pa
         month_map = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6, 'Jul':7, 
                      'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
 
-        for fi in glob.glob(path + '/*.csv'):
-            split = fi.split('/')[-1].split('-')
+        for fi in glob.glob(path + os.sep + '*.csv'):
+            split = fi.split(os.sep)[-1].split('-')
             key = split[0]
             date = split[1]
             date = date[:4] + '-' + date[4:]

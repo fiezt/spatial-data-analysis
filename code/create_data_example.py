@@ -4,13 +4,13 @@ import datetime
 import load_sdot_utils
 
 curr_path = os.getcwd()
-data_path = curr_path + '/../data'
-raw_transaction_path = data_path + '/RawTransactionData'
-belltown_path = data_path + '/Belltown_Minute'
-commcore_path = data_path + '/CommercialCore_Minute'
-pikepine_path = data_path + '/PikePine_Minute'
-firsthill_path = data_path + '/FirstHill_Minute'
-dennytriangle_path = data_path + '/DennyTriangle_Minute'
+data_path = os.path.join(curr_path, '..', 'data')
+raw_transaction_path = os.path.join(data_path, 'RawTransactionData')
+belltown_path = os.path.join(data_path, 'Belltown_Minute')
+commcore_path = os.path.join(data_path, 'CommercialCore_Minute')
+pikepine_path = os.path.join(data_path, 'PikePine_Minute')
+firsthill_path = os.path.join(data_path, 'FirstHill_Minute')
+dennytriangle_path = os.path.join(data_path, 'DennyTriangle_Minute')
 
 # Indicating to pull data from March-July 2017.
 months = [4, 5, 6, 7]
@@ -22,13 +22,13 @@ for month, year in zip(months, years):
     load_sdot_utils.get_data(month, year, raw_transaction_path, verbose=False)
 
 filenames = []
-for fi in glob.glob(raw_transaction_path + '/*.csv'):
-    date = fi.split('/')[-1].split('_')[0]
+for fi in glob.glob(raw_transaction_path + os.sep + '*.csv'):
+    date = fi.split(os.sep)[-1].split('_')[0]
     month_year = (int(date[0:2]), int(date[4:]))
 
     filenames.append(fi)
 
-filenames = sorted(filenames, key=lambda fi: datetime.datetime.strptime(fi.split('/')[-1].split('_')[0], '%m%d%Y'))
+filenames = sorted(filenames, key=lambda fi: datetime.datetime.strptime(fi.split(os.sep)[-1].split('_')[0], '%m%d%Y'))
 
 months_years = [fi.split('/')[-1].split('_')[0] for fi in filenames]
 months_years = [(int(date[0:2]), int(date[4:])) for date in months_years]

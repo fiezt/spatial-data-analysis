@@ -120,11 +120,11 @@ def run_gmm_simulations(park_data, gps_loc, time, num_comps, k, p_value, fig_pat
 
 def main():
     curr_dir = os.getcwd()
-    data_path = curr_dir + '/../data/'
-    fig_path = curr_dir + '/../figs/'
-    results_path = curr_dir + '/../results/'
-    animation_path = curr_dir + '/../animation/'
-    belltown_path = data_path + '/Belltown_Hour'
+    data_path = os.path.join(curr_dir, '..', 'data')
+    fig_path = os.path.join(curr_dir, '..', 'figs')
+    results_path = os.path.join(curr_dir, '..', 'results')
+    animation_path = os.path.join(curr_dir, '..', 'animation')
+    belltown_path = os.path.join(data_path, 'Belltown_Hour')
 
     time = int(sys.argv[1])
     num_comps = int(sys.argv[2])
