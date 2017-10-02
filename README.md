@@ -2,6 +2,47 @@
 ### Tanner Fiez, Lillian Ratliff, Chase Dowling, Baosen Zhang. "Data-Driven Spatio-Temporal Modeling of Parking Demand," submitted to American Control Conference (ACC) 2018.
 
 # Description
+Management of curbside parking in cities has become increasingly important as these areas are expanding. To mitigate congestion, while meeting a city’s diverse needs, performance based pricing schemes have received a significant amount of attention. However, several recent studies suggest location, time of day, and awareness of policies are the primary factors that drive parking decisions. In light of this, we provide an extensive study of the spatio-temporal characteristics of parking demand. This work advances the understanding of where and when to set pricing policies, as well as how to target information and incentives to drivers looking to park. Harnessing data provided by the Seattle Department of Transportation, we develop a Gaussian mixture model based technique to identify zones with similar spatial demand as quantified by spatial autocorrelation. In support of this technique we provide a method based on the repeatability of our Gaussian mixture model to show demand for parking is consistent through time.
+
+# Instructions
+Code is contained in the code folder of the repository. The file descriptions
+below explain the structure of the code and how to use the code to run various analysis.
+
+# File Descriptions
+##### load_sdot_utils.py
+This file implements functions to pull and process parking transaction data from
+the Seattle Department of Transportation (SDOT) API. The functions allow for
+raw transaction data to be converted to minute by minute occupancy estimates
+for each block-face in selected neighborhoods which can be aggregated to a desired
+granularity. In create_data_example.py an example is provided to pull transaction
+data for several months, create and write files containing minute by minute
+occupancies for block-faces to folders separated by neighborhood, and use these
+files to aggregate to hourly average occupancies.  
+
+##### process_data.py:
+This file contains a function to process hourly occupancies to average occupancies
+over the time period in the data files. Block closures are also accounted for
+in this processing. Additionally, GPS data is loaded for the block-faces. An
+example of running this file is below. 
+```
+load_data(data_path, load_paths)
+```
+
+##### figure_functions.py:
+
+##### mixture_animation.py:
+
+##### gmm.py:
+
+##### kmeans_utils.py:
+
+##### map_overlay.py:
+
+##### moran_auto.py:
+
+##### run_analysis.py:
+
+##### write_results.py:
 
 # Dependencies
     python==2.7  
