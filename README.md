@@ -23,14 +23,22 @@ files to aggregate to hourly average occupancies.
 This file contains a function to process hourly occupancies to average occupancies
 over the time period in the data files. Block closures are also accounted for
 in this processing. Additionally, GPS data is loaded for the block-faces. An
-example of running this file is below. 
+example of running this file is below. Using the function this file enables
+running all the analysis in the project.
 ```
-load_data(data_path, load_paths)
+import process_data
+
+params = process_data.load_data(data_path, load_paths)
+element_keys, loads, gps_loc, park_data, idx_to_day_hour, day_hour_to_idx = params
 ```
 
 ##### figure_functions.py:
+This files provides several helper functions to visualize the data to gain
+insights into the spatio-temporal properties of demand for parking.
 
 ##### mixture_animation.py:
+This file provides functions to create a video animation of applying a
+Gaussian mixture model.
 
 ##### gmm.py:
 
