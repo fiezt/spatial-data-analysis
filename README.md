@@ -39,13 +39,13 @@ using data from 2016 are given below.
 
 
 
-<img src="/figs/belltown_division.png" width="200"/>
+<img src="/figs/belltown_division.png" width="400"/>
 
-<img src="/figs/contours.png" width="200"/>
+<img src="/figs/contours.png" width="400"/>
 
-<img src="/figs/mixture_plot.png" width="200"/>
+<img src="/figs/mixture_plot.png" width="400"/>
 
-<img src="/figs/temporal_day_plots.png" width="600"/>
+<img src="/figs/temporal_day_plots.png" width="1000"/>
 
 ##### mixture_animation.py:
 This file provides functions to create a video animation of applying a
