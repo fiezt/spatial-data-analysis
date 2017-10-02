@@ -30,7 +30,7 @@ for fi in glob.glob(raw_transaction_path + os.sep + '*.csv'):
 
 filenames = sorted(filenames, key=lambda fi: datetime.datetime.strptime(fi.split(os.sep)[-1].split('_')[0], '%m%d%Y'))
 
-months_years = [fi.split('/')[-1].split('_')[0] for fi in filenames]
+months_years = [fi.split(os.sep)[-1].split('_')[0] for fi in filenames]
 months_years = [(int(date[0:2]), int(date[4:])) for date in months_years]
 months = [month_year[0] for month_year in months_years]
 years = [month_year[1] for month_year in months_years]
