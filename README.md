@@ -6,7 +6,6 @@
 # Dependencies
 python==2.7
 
-
 pandas==0.20.3
 
 
