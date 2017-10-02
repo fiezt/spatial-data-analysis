@@ -35,13 +35,13 @@ element_keys, loads, gps_loc, park_data, idx_to_day_hour, day_hour_to_idx = para
 ##### figure_functions.py:
 This files provides several helper functions to visualize the data to gain
 insights into the spatio-temporal properties of demand for parking. Some examples
-using data from 2016 are given below. 
+using data from 2016 are given below.
 
 <img src="/figs/belltown_division.png" alt="Drawing" style="width: 200px;"/>
 
-<img src="/figs/contours.png" alt="Drawing" style="width: 200px;"/>
+<img src="/figs/contours.png" alt="Drawing" style="width: 100px;"/>
 
-<img src="/figs/mixture_plot.png" alt="Drawing" style="width: 200px;"/>
+<img src="/figs/mixture_plot.png" alt="Drawing" style="width: 100px;"/>
 
 <img src="/figs/temporal_day_plots.png" alt="Drawing" style="width: 600px;"/>
 
