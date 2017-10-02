@@ -5,7 +5,7 @@
 
 # Dependencies
 python==2.7  
-pandas==0.20.3 
+pandas==0.20.3    
 seaborn==0.8.1 
 scipy==0.19.1 
 gmplot==1.1.1 
