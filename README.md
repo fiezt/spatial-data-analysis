@@ -39,9 +39,9 @@ using data from 2016 are given below.
 
 <img src="/figs/belltown_division.png" alt="Drawing" style="width: 200px;"/>
 
-<img src="/figs/contours.png" alt="Drawing" style="width: 100px;"/>
+<img src="/figs/contours.png" alt="Drawing" style="width: 10px;"/>
 
-<img src="/figs/mixture_plot.png" alt="Drawing" style="width: 100px;"/>
+<img src="/figs/mixture_plot.png" alt="Drawing" style="width: 10px;"/>
 
 <img src="/figs/temporal_day_plots.png" alt="Drawing" style="width: 600px;"/>
 
