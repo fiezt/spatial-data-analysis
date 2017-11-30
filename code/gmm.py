@@ -3,13 +3,10 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn import mixture
 from collections import defaultdict
 import moran_auto
-import os
-import pickle
 import itertools
 import multiprocessing
 import functools
 import warnings
-import time as time_
 warnings.filterwarnings('ignore')
 
 
