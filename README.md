@@ -1,4 +1,11 @@
 # Publications
+This work is associated with the following publications:
+
+
+### Tanner Fiez, Lillian Ratliff. "Data-Analytics and Learning Methods for Modeling Spatio-Temporal Parking Demand," submitted to IEEE Transactions on Intelligent Transportation Systems (ITS) 2018.
+
+### Chase Dowling, Tanner Fiez, Lillian Ratliff, Baosen Zhang. "Fusing Data Streams to Model Congestion Caused by Drivers Cruising for Curbside Parking," submitted to Nature Communications 2018.
+
 ### Tanner Fiez, Lillian Ratliff, Chase Dowling, Baosen Zhang. "Data-Driven Spatio-Temporal Modeling of Parking Demand," submitted to American Control Conference (ACC) 2018.
 
 # Description
