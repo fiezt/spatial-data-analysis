@@ -8,7 +8,6 @@ from matplotlib import cm
 from matplotlib import animation 
 from matplotlib.colors import LightSource
 from mpl_toolkits.mplot3d import Axes3D
-import random
 import os
 import pickle
 import gmplot
@@ -23,7 +22,7 @@ from map_overlay import MapOverlay
 import seaborn as sns
 sns.reset_orig()
 
-
+# Getting the background figure name that is set.
 back_fig_name = pickle.load(open(os.path.join(os.getcwd(), '..',  'data', 'background_img_name.p'), 'rb'))
 
 if back_fig_name == 'belltown':
@@ -240,8 +239,15 @@ def interpolation(loads, gps_loc, time, fig_path, filename='interpolation.png', 
     pix_pos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in xrange(len(gps_loc))])
 
     plt.figure(figsize=(18, 16))
-    ax = plt.axes(xlim=(min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100),
-                  ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])-100))
+    if back_fig_name == 'belltown':
+        ax = plt.axes(xlim=(min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100),
+                      ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+    elif back_fig_name == 'belltown_denny':
+        ax = plt.axes(xlim=(min(pix_pos[:, 0])-50, max(pix_pos[:, 0])+10),
+                      ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+80))
+    elif back_fig_name == 'belltown_commcore':
+        ax = plt.axes(xlim=(min(pix_pos[:, 0]), max(pix_pos[:, 0])),
+                      ylim=(min(pix_pos[:, 1])-30, max(pix_pos[:, 1])))
 
     # Plotting background image of the map.
     im = imread(os.path.join(fig_path, fig_name))
@@ -335,8 +341,15 @@ def triangular_grid(loads, gps_loc, time, fig_path, filename='triangle.png', sho
     pix_pos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in xrange(len(gps_loc))])
 
     plt.figure(figsize=(18, 16))
-    ax = plt.axes(xlim=(min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100),
-                  ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])-100))
+    if back_fig_name == 'belltown':
+        ax = plt.axes(xlim=(min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100),
+                      ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+    elif back_fig_name == 'belltown_denny':
+        ax = plt.axes(xlim=(min(pix_pos[:, 0])-50, max(pix_pos[:, 0])+10),
+                      ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+80))
+    elif back_fig_name == 'belltown_commcore':
+        ax = plt.axes(xlim=(min(pix_pos[:, 0]), max(pix_pos[:, 0])),
+                      ylim=(min(pix_pos[:, 1])-30, max(pix_pos[:, 1])))
 
     # Plotting background image of the map.
     im = imread(os.path.join(fig_path, fig_name))
@@ -1451,8 +1464,15 @@ def centroid_plots(centers, gps_loc, times, fig_path, num_comps,
         else:
             ax = fig.add_subplot(shape[0], shape[1], fig_count)
             
-        ax.set_xlim((min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100))
-        ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+        if back_fig_name == 'belltown':
+            ax.set_xlim((min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100))
+            ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+        elif back_fig_name == 'belltown_denny':
+            ax.set_xlim((min(pix_pos[:, 0])-50, max(pix_pos[:, 0])+10))
+            ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+80))
+        elif back_fig_name == 'belltown_commcore':
+            ax.set_xlim((min(pix_pos[:, 0]), max(pix_pos[:, 0])))
+            ax.set_ylim((min(pix_pos[:, 1])-30, max(pix_pos[:, 1])))
         
         if isinstance(times, list):
             time = times[fig_count-1]
@@ -1569,8 +1589,15 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
         else:
             ax = fig.add_subplot(shape[0], shape[1], fig_count)
 
-        ax.set_xlim((min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100))
-        ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])-100))
+        if back_fig_name == 'belltown':
+            ax.set_xlim((min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100))
+            ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+        elif back_fig_name == 'belltown_denny':
+            ax.set_xlim((min(pix_pos[:, 0])-50, max(pix_pos[:, 0])+10))
+            ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+80))
+        elif back_fig_name == 'belltown_commcore':
+            ax.set_xlim((min(pix_pos[:, 0]), max(pix_pos[:, 0])))
+            ax.set_ylim((min(pix_pos[:, 1])-30, max(pix_pos[:, 1])))
 
         if isinstance(times, list):
             time = times[fig_count-1]
