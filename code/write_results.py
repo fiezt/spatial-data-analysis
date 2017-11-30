@@ -3,46 +3,47 @@ import pandas as pd
 import os
 
 
-
 def write_gmm_results(consistencies, results_path, filename='consistencies.csv'):
-    """
+    """Writing the consistency results to a file.
 
+    :param consistencies: List of consistency values to write to file.
+    :param results_path: File path to save the file to.
+    :param filename: File name to save the file as.
     """
 
     consistency_results = np.array(consistencies).reshape((6, -1))
     d = consistency_results.shape[1]
+
+    # Hourly average.
     hourly = np.round(consistency_results.mean(axis=0), 1)
+
+    # Daily average.
     daily = np.concatenate((np.round(consistency_results.mean(axis=1), 1), [np.nan]))
+
     consistency_results = np.vstack((consistency_results, hourly))
     consistency_results = np.hstack((consistency_results, daily.reshape((-1, 1))))
 
     columns = range(8, 8 + d) + ['Average Daily']
     index = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Average Hourly']
-    consistency_results = pd.DataFrame(consistency_results, index=index, columns=columns)
 
+    consistency_results = pd.DataFrame(consistency_results, index=index, columns=columns)
     consistency_results.to_csv(os.path.join(results_path, filename))
 
 
 def write_moran_results(days, hours, morans, p_value, results_path):
-
-    """Writing all the Moran autocorrelation results to files.
+    """Writing the Moran autocorrelation results to files.
 
     :param days: List of days indexes.
-    :param hours: List of hour indexes which correspond with the days indexes.
-    :param morans_mixture: List of tuples for each date in the training set
-    with each tuple containing the Moran I value, Moran expectation value, Moran
-    variance, Moran z score, Moran one sided p value, and Moran two sided p
-    value using the connections of the mixture components as the weight matrix.
-    :param morans_area: List of tuples for each date in the training set
-    with each tuple containing the Moran I value, Moran expectation value, Moran
-    variance, Moran z score, Moran one sided p value, and Moran two sided p
-    value using the paid area connections from sdot as the weight matrix.
-    :param morans_neighbor: List of tuples for each date in the training set
-    with each tuple containing the Moran I value, Moran expectation value, Moran
-    variance, Moran z score, Moran one sided p value, and Moran two sided p
-    value using the neighbor connections as the weight matrix.
+    :param hours: List of hour indexes.
+    :param morans: List of tuples for each date in the training set with
+    each tuple containing the Moran I value, Moran expectation value, Moran
+    variance, Moran z score, Moran one sided p value, and Moran two sided p.
     :param p_value: Float p value to use to measure significance.
     :param results_path: File path to save results files to.
+
+    :return I_avg: Float average Moran I value.
+    :return p_one_side_sig_avg: Float percentage of significant one sided p value instances.
+    :return p_two_side_sig_avg: Float percentage of significant two sided p value instances.
     """
 
     I = [[morans[j][i][0] for i in xrange(len(morans[j]))] for j in xrange(len(morans))]
@@ -65,7 +66,7 @@ def write_moran_results(days, hours, morans, p_value, results_path):
         index.append(day + ' ' + hour)
         
 
-    ###################### Writing moran mixture results #######################
+    ###################### Writing moran results #######################
     I_df = pd.DataFrame(data=I, index=index)
     I_df = I_df.fillna('')
     I_df.to_csv(os.path.join(results_path, 'I_results.csv'), 
@@ -99,7 +100,7 @@ def write_moran_results(days, hours, morans, p_value, results_path):
     ############################################################################
 
 
-    ###################### Writing moran average results #######################
+    ###################### Computing Moran average results #######################
     I_avg = np.array([item for sublist in I for item in sublist]).mean()
     p_one_sig_avg = np.array(one_sided_sig).mean()
     p_two_sig_avg = np.array(two_sided_sig).mean()
@@ -111,7 +112,7 @@ def write_centroid_distance_results(days, hours, distances, results_path):
     """Writing the average distance to centroid of cluster centroids from each point.
 
     :param days: List of days indexes.
-    :param hours: List of hour indexes which correspond with the days indexes.
+    :param hours: List of hour indexes.
     :param distances: Numpy array of 2 dimensions with the mean as the crow flies distance
     from all points in a cluster to the clusters centroid for each centroid in each row.
     :param results_path: File path to save results files to.
