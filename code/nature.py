@@ -2,7 +2,6 @@ import pickle
 import numpy as np
 import pandas as pd
 import os
-import time
 import process_data
 import gmm
 import figure_functions
@@ -12,7 +11,6 @@ import write_results
 
 curr_dir = os.getcwd()
 data_path = os.path.join(curr_dir, '..', 'data')
-animation_path = os.path.join(curr_dir, '..', 'animation')
 belltown_path = os.path.join(data_path, 'Belltown_Hour')
 fig_path = os.path.join(curr_dir, '..', 'nature_figs')
 results_path = os.path.join(curr_dir, '..', 'nature_results')
@@ -66,7 +64,6 @@ morans_dist_area = [result[6] for result in results]
 morans_dist = [result[7] for result in results]
 
 morans_neighbor = [result[8] for result in results]
-
 morans_3 = [neighbor[3] for neighbor in morans_neighbor]
 morans_5 = [neighbor[5] for neighbor in morans_neighbor]
 morans_10 = [neighbor[10] for neighbor in morans_neighbor]
