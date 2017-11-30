@@ -15,7 +15,7 @@ def locational_demand_analysis(park_data, gps_loc, num_comps, k, area_map, verbo
 
     This function finds the consistency of the GMM fit over time and also
     finds the spatial autocorrelation characteristics using Moran's I with
-    3 types of weight matrices and gets the centroids at each fit of the
+    different types of weight matrices and gets the centroids at each fit of the
     mixture model for each day of the week and time of the day.
 
     :param park_data: Multi-index DataFrame containing datetimes in the first
@@ -24,15 +24,12 @@ def locational_demand_analysis(park_data, gps_loc, num_comps, k, area_map, verbo
     :param gps_loc: Numpy array with each row containing the lat, long pair
     midpoints for a block-face.
     :param num_comps: Integer number of mixture components for the model.
-    :param k: Integer number of neighbors to use for the Moran weighting matrix.
+    :param k: Integer or list containing number of neighbors to use for the Moran weighting matrix.
+    :param area_map: Dictionary from key to subarea.
     :param verbose: Bool indicator of whether to print progress.
 
-    :return results: List of tuples with each tuple containing the day of week 
-    as an integer, integer hour of the day, consistency measure, Moran parameters
-    using weighting matrix of the mixture components, Moran parameters using
-    weighting matrix of the paid area, Moran parameters using the weighting matrix
-    of the k nearest neighbor block-faces, and list of numpy arrays of the GPS
-    coordinates of the centroids of the cluster for each fit.
+    :return results: List containing the tuple of results returned from
+    locational_demand_one_time at each instance.
     """
 
     days = sorted(park_data['Day'].unique())
@@ -56,10 +53,6 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps,
                                k_vals, area_map, verbose, iteration):
     """Find GMM consistency and spatial autocorrelation at one day of the week and time of day.
 
-    This function finds the consistency of the GMM fit over time and also
-    finds the spatial autocorrelation characteristics using Moran's I with
-    3 types of weight matrices and gets the centroids at each fit of the
-    mixture model for a single day of the week and time of the day.
     
     :param park_data: Multi-index DataFrame containing datetimes in the first
     level index and block-face keys in the second level index. Values include
@@ -68,28 +61,55 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps,
     midpoints for a block-face.
     :param times: List of tuples, with each tuple containing day and hour pair.
     :param num_comps: Integer number of mixture components for the model.
-    :param k: Integer number of neighbors to use for the Moran weighting matrix.
+    :param k_vals: Integer or list of number of neighbors to use for the Moran weighting matrix.
     :param iteration: Integer iteration number of the multiprocessing.
+
+
+    day, hour, time_avg_consistency, morans_mixture, morans_dist_mixture, \
+           morans_area, morans_dist_area, morans_dist, morans_neighbor, gmm_var, sdot_var, centers
 
     :return day: Integer day of week.
     :return hour: Integer hour of the day.
+
     :return time_avg_consistency: Float of the consistency percentage of the mixture
     model assignments (a test point is consistent if it stays in the same component),
     averaged over fitting a model on a date, testing on all others, averaging 
     over the testing consistencies and then averaging over all these averages for
     each time a model is fit on a date.
+
     :return morans_mixture: List of tuples for each date in the training set 
     with each tuple containing the Moran I value, Moran expectation value, Moran 
     variance, Moran z score, Moran one sided p value, and Moran two sided p 
     value using the connections of the mixture components as the weight matrix.
+
+    :return morans_dist_mixture: List of tuples for each date in the training set
+    with each tuple containing the Moran I value, Moran expectation value, Moran
+    variance, Moran z score, Moran one sided p value, and Moran two sided p
+    value using the connections of the mixture components scaled by distance as the weight matrix.
+
     :return morans_area: List of tuples for each date in the training set
     with each tuple containing the Moran I value, Moran expectation value, Moran
     variance, Moran z score, Moran one sided p value, and Moran two sided p
     value using the paid area connections from sdot as the weight matrix.
-    :return morans_neighbor: List of tuples for each date in the training set
-    with each tuple containing the Moran I value, Moran expectation value, Moran 
-    variance, Moran z score, Moran one sided p value, and Moran two sided p 
-    value using the neighbor connections as the weight matrix.
+
+    :return morans_dist_area: List of tuples for each date in the training set
+    with each tuple containing the Moran I value, Moran expectation value, Moran
+    variance, Moran z score, Moran one sided p value, and Moran two sided p
+    value using the paid area connections from sdot scaled by distance as the weight matrix.
+
+    :return morans_dist: List of tuples for each date in the training set
+    with each tuple containing the Moran I value, Moran expectation value, Moran
+    variance, Moran z score, Moran one sided p value, and Moran two sided p
+    value using distance as the weight matrix.
+
+    :return morans_neighbor: Dictionary containing list of tuples for each date
+    in the training set with each tuple containing the Moran I value,
+    Moran expectation value, Moran variance, Moran z score, Moran one sided p value,
+    and Moran two sided p value using the neighbor connections as the weight matrix.\
+    Each key is for a different value of k.
+
+    :return gmm_var: List of average variance in occupancy within the GMM components of each fit.
+    :return sdot_var: List of average variance in occupancy within the sdot paid areas at each instance.
     :return centers: List of numpy arrays of the centroids of each fit.
     """
 
@@ -209,9 +229,11 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps,
 
             morans_neighbor[k].append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
 
+        # Finding variance of occupancy within GMM zones.
         gmm_var = np.array([train_loads[np.where(train_labels==comp)[0]].var() for comp in xrange(num_comps)]).mean()
         gmm_vars.append(gmm_var)
 
+        # Finding variance of occupancy within current paid parking zones.
         sdot_var = np.array([train_loads[subarea_to_key[area]].var() for area in subarea_to_key]).mean()
         sdot_vars.append(sdot_var)
 
