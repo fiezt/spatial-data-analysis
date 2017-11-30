@@ -4,15 +4,22 @@ import pickle
 import os
 import glob
 import datetime
+import calendar
 from pandas.tseries.holiday import USFederalHolidayCalendar
+from collections import defaultdict
 
 
-def load_data(data_path, load_paths, verbose=False):
+def load_data(data_path, load_paths, month_year_start, month_year_end, 
+              day_start=None, day_end=None, verbose=False):
     """Process files with load data for block-faces to be used for further analysis.
     
-    :param data_path: Path ti directory containing blockface_locs.p and block_info.csv
+    :param data_path: Path to directory containing blockface_locs.p and block_info.csv
     :param load_paths: Path to directory containing load data for block-faces
     or list of paths to directories containing load data for block-faces.
+    :param month_year_start: Tuple of the integer month (1-12) and integer year to begin using data.
+    :param month_end_start: Tuple of the integer month (1-12) and integer year to end using data.
+    :param day_start: Integer day to begin using data corresponding to the start month and year.
+    :param day_end: Integer day to end using data corresponding to the end month and year.
     :param verbose: Bool indicator of whether to print info about blocks that are skipped.
 
     :return element_keys: List containing the keys of block-faces with load data.
@@ -52,6 +59,15 @@ def load_data(data_path, load_paths, verbose=False):
     holidays = cal.holidays(start='2012-01-01', end=datetime.datetime.now().date()).to_pydatetime()
     holidays = [hol.date() for hol in holidays]
 
+    # Getting starting and ending date to keep data for.
+    if day_start == None:
+        day_start = 1
+    if day_end == None:
+        day_end = calendar.monthrange(month_year_end[1], month_year_end[0])[1]
+
+    date_start = datetime.date(month_year_start[1], month_year_start[0], day_start)
+    date_end = datetime.date(month_year_end[1], month_year_end[0], day_end)
+
     avg_loads = []
     gps_loc = []
     element_keys = []
@@ -63,24 +79,25 @@ def load_data(data_path, load_paths, verbose=False):
         load_paths = [load_paths]
 
     for load_path in load_paths:
-        for fi in sorted(glob.glob(load_path + '/*.csv'), key=lambda fi: int(fi.split('/')[-1].split('.')[0])):
-            key = int(fi.split('/')[-1].split('.')[0])
+        for fi in sorted(glob.glob(load_path + os.sep + '*.csv'), key=lambda fi: int(fi.split(os.sep)[-1].split('.')[0])):
+            key = int(fi.split(os.sep)[-1].split('.')[0])
 
             block_data = pd.read_csv(fi, names=['Datetime', 'Load'])
 
             block_data['Datetime'] = pd.to_datetime(block_data['Datetime'])
             block_data.sort_values(by='Datetime', inplace=True)
-            block_data.reset_index(inplace=True, drop=True)
 
             # Dropping days where the supply was 0 for this blockface.
             block_data.dropna(inplace=True)
-            block_data.reset_index(inplace=True, drop=True)
 
             block_data['Date'] = block_data['Datetime'].dt.date
             block_data['Time'] = block_data['Datetime'].dt.time
             block_data['Day'] = block_data['Datetime'].dt.weekday
             block_data['Hour'] = block_data['Datetime'].dt.hour
             block_data['Minute'] = block_data['Datetime'].dt.minute
+
+            # Keeping the data in the specified date range.
+            block_data = block_data.loc[(block_data['Date'] >= date_start) & (block_data['Date'] <= date_end)]
 
             # Getting rid of Sunday since there is no paid parking.
             block_data = block_data.loc[block_data['Day'] != 6]
@@ -189,13 +206,16 @@ def load_data(data_path, load_paths, verbose=False):
 
                     block_data.loc[mask3, 'Load'] = np.nan   
 
-            element_keys.append(key)
-
-            park_data[key] = block_data
-
             # Getting the average load for each hour of the week for the block.
             avg_load = block_data.groupby(['Day', 'Hour'])['Load'].mean().values.reshape((1,-1))
+            
+            if avg_load.shape != (1, 72):
+                gps_loc.pop()
+                continue
+
             avg_loads.append(avg_load)
+            element_keys.append(key)
+            park_data[key] = block_data
     
     # Each row has load and GPS locations for a block. Ordered as in element_keys.
     avg_loads = np.vstack((avg_loads))
@@ -225,3 +245,48 @@ def load_data(data_path, load_paths, verbose=False):
     park_data = park_data.swaplevel(0, 1).sort_index()
 
     return element_keys, avg_loads, gps_loc, park_data, idx_to_day_hour, day_hour_to_idx
+
+
+def get_price_changes(area, data_path):
+    """Find price or time changes for blockfaces in a neighborhood.
+
+    :param area: String of neighborhood to find changes for.
+    :param data_path: Path to directory containing block_info.csv
+
+    :return price_changes: Default dictionary with keys being a tuple of dates, 
+    where the first date is when a price changed and the second date being when
+    that price started. The values are a tuple of the block key and an array of 
+    the price changes at each time interval. These are relative. A negative 
+    value would mean price decreased by that amount after the first date in the key. 
+
+    :return time_changes: Default dictionary with keys being a tuple of dates, 
+    where the first date is when the start or end time of paid parking changed 
+    and the second date being when that time interval started. The values are a 
+    tuple of the block key, the previous times of paid parking, and the new times
+    of paid parking. 
+    """
+
+    block_info = pd.read_csv(os.path.join(data_path, 'block_info.csv'))
+    area = block_info.loc[block_info['PaidParkingArea'] == area]
+
+    price_changes = defaultdict(list)
+    time_changes = defaultdict(list)
+
+    for key in area['ElementKey'].unique():
+        block = area.loc[area['ElementKey'] == key]
+        block = block.dropna(subset=['WeekdayRate1'])
+        block = block.sort_values(by='EffectiveStartDate')
+
+        prices = block.loc[:, ['WeekdayRate1', 'WeekdayRate2', 'WeekdayRate3', 
+                               'SaturdayRate1', 'SaturdayRate2', 'SaturdayRate3']].values
+        times = block.loc[:, ['StartTimeWeekday', 'EndTimeWeekday', 
+                              'StartTimeSaturday', 'EndTimeSaturday']].values
+        dates = block.loc[:, ['EffectiveStartDate', 'EffectiveEndDate']].values
+
+        for i in xrange(len(block)-1):
+            if not np.array_equal(prices[i], prices[i+1]):
+                price_changes[(dates[i+1,0], dates[i,0])].append((key, prices[i]-prices[i+1]))
+            if not np.array_equal(times[i], times[i+1]):
+                time_changes[(dates[i+1,0], dates[i,0])].append((key, times[i], times[i+1]))
+                
+    return price_changes, time_changes

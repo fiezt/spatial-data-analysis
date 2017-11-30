@@ -5,7 +5,7 @@ from collections import defaultdict
 import scipy.stats as st
 
 
-def get_area_weights(train_active_index, N, data_path=os.path.join(os.getcwd(), '..', 'data')):
+def get_area_weights(train_active_index, N, area_map, subarea_to_key):
     """Get the weight matrix for Moran I by using the paid area connections.
 
     :param train_active_index: Numpy array of the active block-face keys.
@@ -16,32 +16,63 @@ def get_area_weights(train_active_index, N, data_path=os.path.join(os.getcwd(), 
     """
 
     weights = np.zeros((N, N))
-
-    area_info = pd.read_csv(os.path.join(data_path, 'paystation_info.csv'))
-    area_info = area_info[['ELMNTKEY', 'PAIDAREA', 'SUBAREA']]
-
-    all_keys = area_info['ELMNTKEY'].unique().tolist()
-
-    area_dict = defaultdict(list)
-    key_dict = {}
-
-    count = 0
-    for key in train_active_index:
-
-        if key in all_keys:
-            neighborhood = area_info.loc[area_info['ELMNTKEY'] == key]['PAIDAREA'].unique().tolist()[0]
-            subarea = area_info.loc[area_info['ELMNTKEY'] == key]['SUBAREA'].unique().tolist()[0]
-            area = (neighborhood, subarea)   
-        else:
-            pass
-
-        area_dict[area].append(count)
-        key_dict[key] = area
-
-        count += 1
-    
     for i in xrange(N):
-        weights[i, area_dict[key_dict[train_active_index[i]]]] = 1
+        weights[i, subarea_to_key[area_map[train_active_index[i]]]] = 1
+        
+    di = np.diag_indices(N)
+    weights[di] = 0
+
+    return weights
+
+
+def get_dist_area_weights(train_active_index, gps_loc, N, area_map, subarea_to_key):
+    """Get the weight matrix for Moran I by using the paid area connections.
+
+    :param train_active_index: Numpy array of the active block-face keys.
+    :param N: Integer number of samples (locations).
+    :param data_path: File path to the paystation_info.csv.
+
+    :return weights: Numpy array of the weight matrix.
+    """
+
+    weights = np.zeros((N, N))
+    all_idx = range(N)
+
+    for i in xrange(N):
+        same_area = subarea_to_key[area_map[train_active_index[i]]]
+        diff_area = list(set(all_idx) - set(same_area))
+
+        dist = np.linalg.norm(gps_loc[i] - gps_loc, axis=1)**2
+        dist /= dist[same_area].max()
+        dist[diff_area] = 1
+        dist = -1*(1 - dist)
+
+        weights[i] = dist
+        
+    di = np.diag_indices(N)
+    weights[di] = 0
+
+    return weights
+
+
+def get_dist_weights(gps_loc, N):
+    """Get the weight matrix for Moran I by using k nearest neighbor connections.
+
+    :param gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
+    :param N: Integer number of samples (locations).
+    :param k: Integer number of neighbors to use for the weighting matrix.
+
+    :return weights: Numpy array of the weight matrix.
+    """
+
+    weights = np.zeros((N, N))
+
+    for i in xrange(N):
+        dist = np.linalg.norm(gps_loc[i] - gps_loc, axis=1)**2
+        dist /= dist.max()
+        dist = -1*(1 - dist)
+        weights[i] = dist
 
     di = np.diag_indices(N)
     weights[di] = 0
@@ -49,27 +80,36 @@ def get_area_weights(train_active_index, N, data_path=os.path.join(os.getcwd(), 
     return weights
 
 
-def moran_area(x, train_active_index, N):
-    """Calculating the Moran I using the paid area weight matrix.
+def get_dist_mixture_weights(train_labels, gps_loc, N):
+    """Calculate the Moran I weight matrix using the mixture connections.
 
-    :param x: Numpy array of the loads.
-    :param train_active_index: Numpy array of the active block-face keys.
+    This function creates an weight matrix where each row represents a
+    block-face and if a block-face is in the same mixture component as another
+    it has a 1 in the corresponding column. The diagonal is 0.
+    
+    :param train_labels: Numpy array containing label for each data point.
     :param N: Integer number of samples (locations).
 
-    :return I: Float of Moran I.
+    :return weights: Numpy array of the weight matrix.
     """
 
-    weights = get_area_weights(train_active_index, N)
+    weights = np.zeros((N, N))
 
-    W = weights.sum()
-    z = x - x.mean()
+    for i in xrange(N):
+        label = train_labels[i]
+        not_matching = np.where(train_labels != label)[0].tolist()
+        matching = np.where(train_labels == label)[0].tolist()
 
-    top = sum(weights[i, j]*z[i]*z[j] for i in xrange(N) for j in xrange(N)) 
-    bottom = np.dot(z.T, z)
+        dist = np.linalg.norm(gps_loc[i] - gps_loc, axis=1)**2
+        dist /= dist[matching].max()
+        dist[not_matching] = 1
+        dist = -1*(1 - dist)
+        weights[i] = dist
 
-    I = (N/W) * top/bottom
+    di = np.diag_indices(N)
+    weights[di] = 0
 
-    return I
+    return weights
 
 
 def get_neighbor_weights(gps_loc, N, k):
@@ -90,31 +130,6 @@ def get_neighbor_weights(gps_loc, N, k):
         weights[i, neighbors] = 1
 
     return weights
-
-
-def moran_neighbor(x, gps_loc, N, k):
-    """Calculating the Moran I using the neighbor weight matrix.
-
-    :param x: Numpy array of the loads.
-    :param gps_loc: Numpy array with each row containing the lat, long pair
-    midpoints for a block-face.
-    :param N: Integer number of samples (locations).
-    :param k: Integer number of neighbors to use for the weighting matrix.
-
-    :return I: Float of Moran I.
-    """
-
-    weights = get_neighbor_weights(gps_loc, N, k)
-
-    W = weights.sum()
-    z = x - x.mean()
-
-    top = sum(weights[i, j]*z[i]*z[j] for i in xrange(N) for j in xrange(N)) 
-    bottom = np.dot(z.T, z)
-
-    I = (N/W) * top/bottom
-
-    return I
 
 
 def get_mixture_weights(train_labels, N):
@@ -143,17 +158,14 @@ def get_mixture_weights(train_labels, N):
     return weights
 
 
-def moran_mixture(x, train_labels, N):
-    """Calculating the Moran I using the mixture model weight matrix.
+def moran_I(x, N, weights):
+    """Calculating the Moran I.
 
     :param x: Numpy array of the loads.
-    :param train_labels: Numpy array containing label for each data point.
     :param N: Integer number of samples.
 
     :return I: Float of Moran I.
     """
-
-    weights = get_mixture_weights(train_labels, N)
 
     W = weights.sum()
     z = x - x.mean()

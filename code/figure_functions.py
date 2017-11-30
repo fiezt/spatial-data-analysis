@@ -24,45 +24,33 @@ import seaborn as sns
 sns.reset_orig()
 
 
-# GPS coordinates of upper left corner of the image.
-background_up_left = [47.6197793, -122.3592749]
+back_fig_name = pickle.load(open(os.path.join(os.getcwd(), '..',  'data', 'background_img_name.p'), 'rb'))
 
-# GPS coordinates of bottom right corner of the image.
-background_bottom_right = [47.607274, -122.334786]
+if back_fig_name == 'belltown':
+    # GPS coordinates of upper left corner of the image.
+    background_up_left = [47.6197793, -122.3592749]
 
-# Pixel dimensions of the image.
-background_img_size = [1135, 864]
+    # GPS coordinates of bottom right corner of the image.
+    background_bottom_right = [47.607274, -122.334786]
 
-# Background figure to overlay on. Must be in figure directory.
-background_fig_name = 'belltown.png'
+    # Pixel dimensions of the image.
+    background_img_size = [1135, 864]
 
-"""
-background_up_left = [47.619223, -122.358267]
-background_bottom_right = [47.609014, -122.327686]
-background_img_size = [950, 471]
-background_fig_name = 'belltown_denny.png'
-"""
+    # Background figure to overlay on. Must be in figure directory.
+    background_fig_name = 'belltown.png'
 
-"""
-background_up_left = [47.619079, -122.357970]
-background_bottom_right = [47.601924, -122.326902]
-background_img_size = [804, 667]
-background_fig_name = 'belltown_commcore.png'
-"""
+elif back_fig_name == 'belltown_denny':
+    background_up_left = [47.623368, -122.358038]
+    background_bottom_right = [47.606751, -122.328627]
+    background_img_size = [795, 668]
+    background_fig_name = 'belltown_denny_new.png'
 
-"""
-background_up_left = [47.632731, -122.359002]
-background_bottom_right = [47.609126, -122.324917]
-background_img_size = [693, 716]
-background_fig_name = 'belltown_denny_uptown_union.png'
-"""
+elif back_fig_name == 'belltown_commcore':
+    background_up_left = [47.619079, -122.357970]
+    background_bottom_right = [47.601924, -122.326902]
+    background_img_size = [804, 667]
+    background_fig_name = 'belltown_commcore.png'
 
-"""
-background_up_left = [47.633412, -122.350718]
-background_bottom_right = [47.612768, -122.324845]
-background_img_size = [636, 748]
-background_fig_name = 'denny_uptown_union.png'
-"""
 
 def setup_image():
     """Specifying parameters of image to overlay plots on.
@@ -223,7 +211,7 @@ def surface_plot(loads, gps_loc, time, fig_path, filename='surface.png', show_fi
     ax.invert_yaxis()
     plt.tight_layout()
 
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight', dpi=600)
 
     if show_fig:
         plt.show()
@@ -253,7 +241,7 @@ def interpolation(loads, gps_loc, time, fig_path, filename='interpolation.png', 
 
     plt.figure(figsize=(18, 16))
     ax = plt.axes(xlim=(min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100),
-                  ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+                  ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])-100))
 
     # Plotting background image of the map.
     im = imread(os.path.join(fig_path, fig_name))
@@ -318,7 +306,7 @@ def interpolation(loads, gps_loc, time, fig_path, filename='interpolation.png', 
 
     plt.tight_layout()
 
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight', dpi=600)
 
     if show_fig:
         plt.show()
@@ -348,7 +336,7 @@ def triangular_grid(loads, gps_loc, time, fig_path, filename='triangle.png', sho
 
     plt.figure(figsize=(18, 16))
     ax = plt.axes(xlim=(min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100),
-                  ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+                  ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])-100))
 
     # Plotting background image of the map.
     im = imread(os.path.join(fig_path, fig_name))
@@ -408,7 +396,7 @@ def triangular_grid(loads, gps_loc, time, fig_path, filename='triangle.png', sho
 
     plt.tight_layout()
 
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight', dpi=600)
 
     if show_fig:
         plt.show()
@@ -416,7 +404,8 @@ def triangular_grid(loads, gps_loc, time, fig_path, filename='triangle.png', sho
     plt.close()
 
 
-def contour_plot(loads, gps_loc, time, fig_path, contours=10, filename='contours.png', show_fig=False):
+def contour_plot(loads, gps_loc, time, fig_path, contours=10, filename='contours.png', 
+                 show_fig=False, caption=False):
     """Create contour plot of the load data on the map.
 
     :param loads: Numpy array where each row is the load data for a block-face
@@ -438,8 +427,16 @@ def contour_plot(loads, gps_loc, time, fig_path, contours=10, filename='contours
     pix_pos = np.array([mp.to_image_pixel_position(list(gps_loc[i, :])) for i in xrange(len(gps_loc))])
 
     plt.figure(figsize=(18, 16))
-    ax = plt.axes(xlim=(min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100),
-                  ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+
+    if back_fig_name == 'belltown':
+        ax = plt.axes(xlim=(min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100),
+                      ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+    elif back_fig_name == 'belltown_denny':
+        ax = plt.axes(xlim=(min(pix_pos[:, 0])-50, max(pix_pos[:, 0])+10),
+                      ylim=(min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+80))
+    elif back_fig_name == 'belltown_commcore':
+        ax = plt.axes(xlim=(min(pix_pos[:, 0]), max(pix_pos[:, 0])),
+                      ylim=(min(pix_pos[:, 1])-30, max(pix_pos[:, 1])))
 
     # Plotting background image of the map.
     im = imread(os.path.join(fig_path, fig_name))
@@ -494,8 +491,9 @@ def contour_plot(loads, gps_loc, time, fig_path, contours=10, filename='contours
     ax.axes.get_xaxis().set_ticks([])
     ax.axes.get_yaxis().set_ticks([])
 
-    ax.set_xlabel(days[day] + ' ' + hour)
-    ax.xaxis.label.set_fontsize(35)
+    if caption:
+        ax.set_xlabel(days[day] + ' ' + hour)
+        ax.xaxis.label.set_fontsize(35)
 
     plt.tight_layout()
 
@@ -544,7 +542,7 @@ def voronoi(gps_loc, fig_path, filename='voronoi.png', show_fig=False):
     ax.invert_yaxis()
     plt.axis('off')
 
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight', dpi=600)
 
     if show_fig:
         plt.show()
@@ -664,7 +662,7 @@ def spatial_heterogeneity(loads, time, fig_path, filename='spatial_heterogeneity
 
     sns.reset_orig()
 
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight', dpi=600)
     
     if show_fig:
         plt.show()
@@ -756,7 +754,7 @@ def temporal_heterogeneity(loads, fig_path, filename='temporal_heterogeneity.png
 
     sns.reset_orig()
 
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight', dpi=600)
     
     if show_fig:
         plt.show()
@@ -780,7 +778,7 @@ def temporal_day_plots(loads, fig_path, filename='temporal_day_plots.png', show_
     sns.set()
     sns.set_style("whitegrid")
 
-    plt.subplots(nrows=1, ncols=6, figsize=(60, 10))
+    fig, ax = plt.subplots(nrows=1, ncols=6, sharey=True, figsize=(60, 10))
 
     # Setting block-faces with negligible load to nan so they are ignored when getting mean.
     with np.errstate(invalid='ignore'):
@@ -802,27 +800,28 @@ def temporal_day_plots(loads, fig_path, filename='temporal_day_plots.png', show_
         # Getting the mean loads for the hours of the given day and scaling for plot.
         counts = np.nanmean(loads, axis=0)[day] * 100
 
-        ax = plt.subplot(1, 6, day_count)
-        ax.set_xticks(np.arange(min(bins), max(bins)+1, 1))
+        ax[day_count-1].set_xticks(np.arange(min(bins), max(bins)+1, 1))
         x_labels = [str(b) + 'AM' if b < 12 else str(b-12) + 'PM' 
                     if b != 12 else str(b) + 'PM' for b in bins]
-        ax.set_xticklabels(x_labels)
-        
-        plt.title(day_dict[day_count], fontsize=36)
-        plt.ylabel(r'Occupancy $\%$', fontsize=32)
-        
-        plt.setp(ax.get_xticklabels(), fontsize=28, rotation=60)
-        plt.setp(ax.get_yticklabels(), fontsize=28)
-        
-        for tick in ax.xaxis.get_majorticklabels():
-            tick.set_horizontalalignment('left')
-        
-        plt.bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
+        ax[day_count-1].set_xticklabels(x_labels)
 
-        plt.xlim([min(bins), max(bins)+1])
-        plt.ylim([0, 70])
-        
+        ax[day_count-1].set_title(day_dict[day_count], fontsize=60)
+
+        plt.setp(ax[day_count-1].get_xticklabels(), fontsize=50, rotation=60)
+        plt.setp(ax[day_count-1].get_yticklabels(), fontsize=50)
+
+        for tick in ax[day_count-1].xaxis.get_majorticklabels():
+            tick.set_horizontalalignment('center')
+
+        ax[day_count-1].bar(bins, counts, width=1, color='red', edgecolor='black', align='edge')
+
+        ax[day_count-1].set_xlim([min(bins), max(bins)+1])
+        ax[day_count-1].set_ylim([0, 70])
+
         day_count += 1
+
+
+    fig.text(-0.015, 0.6, r'Occupancy $\%$', fontsize=55, va='center', rotation='vertical')
 
     sns.reset_orig()
 
@@ -899,7 +898,287 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots.png', sho
 
     plt.tight_layout()
 
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight', dpi=600)
+
+    if show_fig:
+        plt.show()
+
+    plt.close()
+
+
+def temporal_change_plot(loads1, loads2, element_keys1, element_keys2, 
+                         fig_path, filename='posneg.png', color_option=1, 
+                         show_fig=False):
+    """Creating a plot showing the change in occupancy from one time period to another.
+
+    This plot will show the percentage of block-faces which increased in occupancy
+    between two time periods, as well as the mean amount blocks increased and 
+    decreased at each time that paid parking is available. This is relative from
+    loads2 to loads1. 
+
+    :param loads1: Numpy array where each row is the load data for a block-face
+    and each column corresponds to a day of week and hour.
+    :param loads2: Numpy array where each row is the load data for a block-face
+    and each column corresponds to a day of week and hour.
+    :param element_keys1: List containing the keys of block-faces corresponding to loads1.
+    :param element_keys2: List containing the keys of block-faces corresponding to loads2.
+    :param fig_path: Path to save the image to.
+    :param filename: Name to save the image as.
+    :param color_option: Option for which color combination. 1-5.
+    :param show_fig: Bool indicating whether to show the image.
+    """
+        
+    # Blocks in the first set that are not in the second set.
+    diff1 = list(set(element_keys1) - set(element_keys2))
+
+    # Blocks in the second set that are not in the first set.
+    diff2 = list(set(element_keys2) - set(element_keys1))
+
+    # Getting indexes of blocks in the first set but not the second set.
+    idx1 = [element_keys1.index(val) for val in diff1]
+
+    # Getting indexes of blocks in the second set but not the first set.
+    idx2 = [element_keys2.index(val) for val in diff2]
+
+    loads1 = np.delete(loads1, idx1, axis=0)
+    loads2 = np.delete(loads2, idx2, axis=0)
+    
+    # Getting difference in the blocks.
+    loads = loads2 - loads1
+
+    # Getting days and times that the load increased.
+    loads_pos = (loads >= 0)
+
+    # Getting the number blocks which increased at each hour.
+    loads_pos_number = loads_pos.sum(axis=0)
+    
+    # Getting the total number of blocks that were active at the hour.
+    total = (np.array([[len(loads)]]) - np.isnan(loads).sum(axis=0)).astype(float)
+    
+    # Getting the percentage of blocks which increased.
+    loads_pos_counts = loads_pos_number/total * 100
+    
+    # Getting the days and times that the load decreased.
+    loads_neg = (loads < 0)
+
+    loads_avg_pos = []
+    loads_avg_neg = []
+
+    for j in xrange(loads.shape[1]):
+        # Computing the mean amount blocks increased of those that did increase.
+        loads_avg_pos.append(np.nanmean(loads[loads_pos[:, j], j]))
+
+        # Computing the mean amount blocks decreased of those that did decrease.
+        loads_avg_neg.append(np.nanmean(loads[loads_neg[:, j], j]))        
+
+    loads_avg_pos = np.array(loads_avg_pos)
+    loads_avg_neg = np.array(loads_avg_neg)
+
+    loads_avg_pos = loads_avg_pos.reshape((1, -1))
+    loads_avg_neg = loads_avg_neg.reshape((1, -1))
+
+    num_times = loads.shape[1]
+    bins = range(num_times)
+
+    counts_pos = np.nanmean(loads_avg_pos, axis=0) * 100
+    counts_neg = np.nanmean(loads_avg_neg, axis=0) * 100
+
+    sns.set()
+    sns.set_style("whitegrid")
+
+    if color_option == 1:
+        color1 = 'firebrick'
+        color2 = 'red'
+    elif color_option == 2:
+        color1 = 'dimgray'
+        color2 = 'darkgray'
+    elif color_option == 3:
+        color1 = 'limegreen'
+        color2 = 'lime'
+    elif color_option == 4:
+        color1 = 'darkorange'
+        color2 = 'orange'
+    elif color_option == 5:
+        color1 = 'darkcyan'
+        color2 = 'darkturquoise'
+
+    plt.figure(figsize=(10, 4))
+
+    ax = plt.axes()
+
+    ax.set_xticks(bins)
+    ax.spines['bottom'].set_visible(False)
+    ax.axhline(linewidth=4, color='black')        
+
+    ax.set_xticklabels([])
+    ax.set_yticks(np.arange(-20, 100, 10))
+    plt.setp(ax.get_yticklabels(), fontsize=16)
+    ax.yaxis.set_ticks_position('left')
+    ax.set_xlim([-.3, num_times + .2])
+
+    if color_option != 5:
+        ax.set_ylim([-20, 20])
+    else:
+        ax.set_ylim([-25, 25])
+
+    ax.bar(bins, counts_pos, width=1, color=color1, edgecolor='black', align='edge')
+    ax.bar(bins, counts_neg, width=1, color=color2, hatch='/', edgecolor='black', align='edge')
+
+    ax2 = ax.twinx()
+    ax2.grid(None)
+    ax2.set_ylim(-20, 80)
+    ax2.yaxis.set_ticks_position('right')
+    
+    # Percentage that have increased.
+    ax2.scatter(np.array(bins) + .5, loads_pos_counts, marker='s', 
+                color='blue')
+    
+    ax2.set_xlim([-.3, num_times + .2])
+    plt.setp(ax2.get_yticklabels(), fontsize=16, color='blue')
+
+    ax.axvline(x=0, color='black')
+    ax.axvline(x=12, color='black')
+    ax.axvline(x=24, color='black')
+    ax.axvline(x=36, color='black')
+    ax.axvline(x=48, color='black')
+    ax.axvline(x=60, color='black')
+    ax.axvline(x=72, color='black')
+
+    ax.set_ylabel(r'$\Delta$  Occupancy $\%$', fontsize=16)
+    ax2.set_ylabel(r'% Blocks Increased', fontsize=16, color='blue')
+
+    if color_option != 5:
+        ax.annotate('Monday', xy=(2,-23), xytext=(2,-23), annotation_clip=False, fontsize=16)
+        ax.annotate('Tuesday', xy=(14,-23), xytext=(14,-23), annotation_clip=False, fontsize=16)
+        ax.annotate('Wednesday', xy=(24.5,-23), xytext=(24.5,-23), annotation_clip=False, fontsize=16)
+        ax.annotate('Thursday', xy=(38,-23), xytext=(38,-23), annotation_clip=False, fontsize=16)
+        ax.annotate('Friday', xy=(51,-23), xytext=(51,-23), annotation_clip=False, fontsize=16)
+        ax.annotate('Saturday', xy=(62,-23), xytext=(62,-23), annotation_clip=False, fontsize=16)
+    else:
+        ax.annotate('Monday', xy=(2,-28), xytext=(2,-28), annotation_clip=False, fontsize=16)
+        ax.annotate('Tuesday', xy=(14,-28), xytext=(14,-28), annotation_clip=False, fontsize=16)
+        ax.annotate('Wednesday', xy=(24.5,-28), xytext=(24.5,-28), annotation_clip=False, fontsize=16)
+        ax.annotate('Thursday', xy=(38,-28), xytext=(38,-28), annotation_clip=False, fontsize=16)
+        ax.annotate('Friday', xy=(51,-28), xytext=(51,-28), annotation_clip=False, fontsize=16)
+        ax.annotate('Saturday', xy=(62,-28), xytext=(62,-28), annotation_clip=False, fontsize=16)
+
+    plt.tight_layout()
+    plt.gcf().subplots_adjust(bottom=0.15)
+
+    sns.reset_orig()
+    
+    plt.savefig(os.path.join(fig_path, filename), dpi=600)
+
+    if show_fig:
+        plt.show()
+
+    plt.close()
+
+
+def temporal_mean_diff_plot(loads1, loads2, element_keys1, element_keys2, 
+                            fig_path, filename='diff.png', color_option=1, 
+                             show_fig=False):
+    """Creating a plot showing the change in occupancy from one time period to another.
+
+    This plot will show the mean amount blocks occupancy changed at each time 
+    that paid parking is available. This is relative from loads2 to loads1. 
+
+    :param loads1: Numpy array where each row is the load data for a block-face
+    and each column corresponds to a day of week and hour.
+    :param loads2: Numpy array where each row is the load data for a block-face
+    and each column corresponds to a day of week and hour.
+    :param element_keys1: List containing the keys of block-faces corresponding to loads1.
+    :param element_keys2: List containing the keys of block-faces corresponding to loads2.
+    :param fig_path: Path to save the image to.
+    :param filename: Name to save the image as.
+    :param color_option: Option for which color combination. 1-5.
+    :param show_fig: Bool indicating whether to show the image.
+    """
+        
+    # Blocks in the first set that are not in the second set.
+    diff1 = list(set(element_keys1) - set(element_keys2))
+
+    # Blocks in the second set that are not in the first set.
+    diff2 = list(set(element_keys2) - set(element_keys1))
+
+    # Getting indexes of blocks in the first set but not the second set.
+    idx1 = [element_keys1.index(val) for val in diff1]
+
+    # Getting indexes of blocks in the second set but not the first set.
+    idx2 = [element_keys2.index(val) for val in diff2]
+
+    loads1 = np.delete(loads1, idx1, axis=0)
+    loads2 = np.delete(loads2, idx2, axis=0)
+    
+    # Getting difference in the blocks.
+    loads = np.nanmean(loads2 - loads1, axis=0)
+    loads = loads.reshape((1, -1))
+
+    num_times = loads.shape[1]
+    bins = range(num_times)
+
+    counts = np.nanmean(loads, axis=0) * 100
+
+    sns.set()
+    sns.set_style("whitegrid")
+
+    if color_option == 1:
+        color = 'firebrick'
+    elif color_option == 2:
+        color = 'dimgray'
+    elif color_option == 3:
+        color = 'limegreen'
+    elif color_option == 4:
+        color = 'darkorange'
+    elif color_option == 5:
+        color = 'darkcyan'
+
+    plt.figure(figsize=(10, 4))
+    ax = plt.axes()
+
+    ax.set_xticks(bins)
+    ax.spines['bottom'].set_visible(False)
+    ax.axhline(linewidth=4, color='black') 
+
+    ax.set_xticklabels([])
+    ax.yaxis.set_ticks(np.arange(-10, 15, 5))
+    plt.setp(ax.get_yticklabels(), fontsize=16)
+    ax.yaxis.set_ticks_position('left')
+
+    plt.bar(bins, counts, width=1, color=color, edgecolor='black', align='edge')
+    plt.xlim([-.3, num_times + .2])
+    plt.ylim([-15, 5])
+
+    ax.axvline(x=0, color='black')
+    ax.axvline(x=12, color='black')
+    ax.axvline(x=24, color='black')
+    ax.axvline(x=36, color='black')
+    ax.axvline(x=48, color='black')
+    ax.axvline(x=60, color='black')
+    ax.axvline(x=72, color='black')
+
+    plt.ylabel(r'$\Delta$  Occupancy $\%$', fontsize=16)
+
+    # ax.annotate('Monday', xy=(2,-11.5), xytext=(2,-11.5), annotation_clip=False, fontsize=16)
+    # ax.annotate('Tuesday', xy=(14,-11.5), xytext=(14,-11.5), annotation_clip=False, fontsize=16)
+    # ax.annotate('Wednesday', xy=(24.5,-11.5), xytext=(24.5,-11.5), annotation_clip=False, fontsize=16)
+    # ax.annotate('Thursday', xy=(38,-11.5), xytext=(38,-11.5), annotation_clip=False, fontsize=16)
+    # ax.annotate('Friday', xy=(51,-11.5), xytext=(51,-11.5), annotation_clip=False, fontsize=16)
+    # ax.annotate('Saturday', xy=(62,-11.5), xytext=(62,-11.5), annotation_clip=False, fontsize=16)
+
+    ax.annotate('Monday', xy=(2,-16.5), xytext=(2,-16.5), annotation_clip=False, fontsize=16)
+    ax.annotate('Tuesday', xy=(14,-16.5), xytext=(14,-16.5), annotation_clip=False, fontsize=16)
+    ax.annotate('Wednesday', xy=(24.5,-16.5), xytext=(24.5,-16.5), annotation_clip=False, fontsize=16)
+    ax.annotate('Thursday', xy=(38,-16.5), xytext=(38,-16.5), annotation_clip=False, fontsize=16)
+    ax.annotate('Friday', xy=(51,-16.5), xytext=(51,-16.5), annotation_clip=False, fontsize=16)
+    ax.annotate('Saturday', xy=(62,-16.5), xytext=(62,-16.5), annotation_clip=False, fontsize=16)
+
+    plt.tight_layout()
+    plt.gcf().subplots_adjust(bottom=0.15)
+
+    sns.reset_orig()
+    
+    plt.savefig(os.path.join(fig_path, filename), dpi=600)
 
     if show_fig:
         plt.show()
@@ -910,7 +1189,7 @@ def temporal_hour_plots(loads, fig_path, filename='temporal_hour_plots.png', sho
 def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
                  default_means=np.array([[47.61774778, -122.35013085], [47.6133535, -122.34369815],
                                          [47.61506114, -122.34803596], [47.61522087, -122.35059538]]),
-                 shape=None, filename='mixture_plot.png', show_fig=False):
+                 shape=None, filename='mixture_plot.png', show_fig=False, caption=False):
     """Plotting the mixture model results at a time or times of day.
 
     This function first creates a mixture model of the load data and the spatial
@@ -967,9 +1246,16 @@ def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
             ax = fig.add_subplot(1, num_figs, fig_count)
         else:
             ax = fig.add_subplot(shape[0], shape[1], fig_count)
-            
-        ax.set_xlim((min(pix_pos[:, 0])-50, max(pix_pos[:, 0])+50))
-        ax.set_ylim((min(pix_pos[:, 1])-50, max(pix_pos[:, 1])+50))
+
+        if back_fig_name == 'belltown':
+            ax.set_xlim((min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100))
+            ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+        elif back_fig_name == 'belltown_denny':
+            ax.set_xlim((min(pix_pos[:, 0])-50, max(pix_pos[:, 0])+10))
+            ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+80))
+        elif back_fig_name == 'belltown_commcore':
+            ax.set_xlim((min(pix_pos[:, 0]), max(pix_pos[:, 0])))
+            ax.set_ylim((min(pix_pos[:, 1])-30, max(pix_pos[:, 1])))
         
         if isinstance(times, list):
             time = times[fig_count-1]
@@ -1091,7 +1377,8 @@ def mixture_plot(loads, gps_loc, times, fig_path, num_comps=4,
         day = time/(num_times/6)
 
         days = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday'}
-        ax.set_xlabel(days[day] + ' ' + hour)
+        if caption:
+            ax.set_xlabel(days[day] + ' ' + hour)
 
     fig.tight_layout()
 
@@ -1193,7 +1480,8 @@ def centroid_plots(centers, gps_loc, times, fig_path, num_comps,
         scatter = ax.scatter(data_pix_pos[:, 0], data_pix_pos[:, 1], s=500, color='red', edgecolor='black')
 
         if num_comps == 4:
-            colors = ['deeppink', 'lawngreen', 'blue', 'aqua']
+          #  colors = ['blue', 'deeppink', 'lawngreen', 'aqua']
+            colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
         else:
             colors = [plt.cm.gist_rainbow(i) for i in np.linspace(0, 1, num_comps)]
 
@@ -1282,7 +1570,7 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
             ax = fig.add_subplot(shape[0], shape[1], fig_count)
 
         ax.set_xlim((min(pix_pos[:, 0])-100, max(pix_pos[:, 0])+100))
-        ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])+100))
+        ax.set_ylim((min(pix_pos[:, 1])-100, max(pix_pos[:, 1])-100))
 
         if isinstance(times, list):
             time = times[fig_count-1]
@@ -1337,7 +1625,7 @@ def centroid_radius(centroids, all_time_points, gps_loc, times, fig_path,
     else:
         plt.subplots_adjust(top=0.98)
 
-    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight')
+    plt.savefig(os.path.join(fig_path, filename), bbox_inches='tight', dpi=600)
 
     if show_fig:
         plt.show()
@@ -1421,7 +1709,7 @@ def model_selection(loads, gps_loc, fig_path, show_fig=False):
     plt.ylabel('Likelihood')
     plt.title('Likelihood Model Selection')
 
-    plt.savefig(os.path.join(fig_path, 'likelihood_model.png'))
+    plt.savefig(os.path.join(fig_path, 'likelihood_model.png'), dpi=600)
 
     if show_fig:
         plt.show()
@@ -1448,7 +1736,7 @@ def model_selection(loads, gps_loc, fig_path, show_fig=False):
     plt.ylabel('BIC')
     plt.title('BIC Model Selection')
 
-    plt.savefig(os.path.join(fig_path, 'bic_model.png'))
+    plt.savefig(os.path.join(fig_path, 'bic_model.png'), dpi=600)
 
     if show_fig:
         plt.show()
@@ -1475,7 +1763,7 @@ def model_selection(loads, gps_loc, fig_path, show_fig=False):
     plt.ylabel('AIC')
     plt.title('AIC Model Selection')
 
-    plt.savefig(os.path.join(fig_path, 'aic_model.png'))
+    plt.savefig(os.path.join(fig_path, 'aic_model.png'), dpi=600)
 
     if show_fig:
         plt.show()
@@ -1485,7 +1773,7 @@ def model_selection(loads, gps_loc, fig_path, show_fig=False):
     sns.reset_orig()
 
 
-def create_animation(loads, gps_loc, fig_path, animation_path, num_comps=4,
+def create_animation(loads, gps_loc, fig_path, animation_path, num_comps=4, times=range(72),
                      filename='mixture.mp4'):
     """Create an animation of the GMM model using figures of each hour of load data.
 
@@ -1502,8 +1790,7 @@ def create_animation(loads, gps_loc, fig_path, animation_path, num_comps=4,
     params = mixture_animation.init_animation(gps_loc, num_comps, fig_path)
     fig, ax, scatter, scatter_centroid, patches, ellipses, mp, center, pix_center = params
 
-    num_times = loads.shape[1]
-    times = range(num_times)
+    num_times = len(times)
 
     # Default means in attempt to keep the colors the same at each time index if num_comps is 4.
     default_means = np.array([[47.61348888, -122.34343007],[47.61179196, -122.34500616],
@@ -1515,5 +1802,6 @@ def create_animation(loads, gps_loc, fig_path, animation_path, num_comps=4,
                                          pix_center, loads, gps_loc, num_comps, ), 
                                   interval=200)
 
-    FFwriter = animation.FFMpegWriter(fps=1)
-    ani.save(os.path.join(animation_path, filename), writer=FFwriter)
+    ani.save(os.path.join(animation_path, filename), fps=1, extra_args=['-vcodec', 'libx264'])
+
+

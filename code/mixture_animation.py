@@ -128,7 +128,7 @@ def animate(frame, times, ax, scatter, scatter_centroid, patches, ellipses,
 
     if num_comps == 4:
 
-        colors = ['blue', 'deeppink', 'aqua', 'lawngreen']
+        colors = ['deeppink', 'blue', 'lawngreen', 'aqua']
         color_codes = {}
 
         for i in range(num_comps):

@@ -23,7 +23,7 @@ files to aggregate to hourly average occupancies.
 This file contains a function to process hourly occupancies to average occupancies
 over the time period in the data files. Block closures are also accounted for
 in this processing. Additionally, GPS data is loaded for the block-faces. An
-example of running this file is below. Using the function this file enables
+example of running this file is below. Using the function in this file enables
 running all the analysis in the project.
 ```
 import process_data

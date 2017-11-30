@@ -1,22 +1,26 @@
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn import mixture
+from collections import defaultdict
 import moran_auto
+import os
+import pickle
 import itertools
 import multiprocessing
 import functools
 import warnings
+import time as time_
 warnings.filterwarnings('ignore')
 
 
-def locational_demand_analysis(park_data, gps_loc, num_comps, k, verbose=True):
+def locational_demand_analysis(park_data, gps_loc, num_comps, k, area_map, verbose=True):
     """Find GMM consistency and spatial autocorrelation at each day of the week and time of day.
 
     This function finds the consistency of the GMM fit over time and also
     finds the spatial autocorrelation characteristics using Moran's I with
     3 types of weight matrices and gets the centroids at each fit of the
     mixture model for each day of the week and time of the day.
-    
+
     :param park_data: Multi-index DataFrame containing datetimes in the first
     level index and block-face keys in the second level index. Values include
     the corresponding loads.
@@ -41,7 +45,8 @@ def locational_demand_analysis(park_data, gps_loc, num_comps, k, verbose=True):
 
     pool = multiprocessing.Pool()
 
-    func = functools.partial(locational_demand_one_time, park_data, gps_loc, times, num_comps, k, verbose)
+    func = functools.partial(locational_demand_one_time, park_data, 
+                             gps_loc, times, num_comps, k, area_map, verbose)
     results = pool.map(func, range(len(times)))
 
     pool.close()
@@ -50,7 +55,8 @@ def locational_demand_analysis(park_data, gps_loc, num_comps, k, verbose=True):
     return results
 
 
-def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, verbose, iteration):
+def locational_demand_one_time(park_data, gps_loc, times, num_comps, 
+                               k_vals, area_map, verbose, iteration):
     """Find GMM consistency and spatial autocorrelation at one day of the week and time of day.
 
     This function finds the consistency of the GMM fit over time and also
@@ -105,7 +111,12 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, verbose,
     centers = [] 
     morans_mixture = [] 
     morans_area = []
-    morans_neighbor = []
+    morans_neighbor = defaultdict(list)
+    morans_dist = []
+    morans_dist_area = []
+    morans_dist_mixture = []
+    gmm_vars = []
+    sdot_vars = []
 
     for train_time in data_df.index.get_level_values(0).unique().tolist():
         train_data = data_df.xs(train_time, level=0)
@@ -136,9 +147,13 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, verbose,
         # Getting the labels by choosing the component which maximizes the posterior probability.
         train_labels = gmm.predict(train)
 
+        subarea_to_key = defaultdict(list)
+        for key in train_active_index:
+            subarea_to_key[area_map[key]].append(train_active_index.index(key))
+
         # Getting spatial correlation statistics for Moran's I using mixture component connections.
         weights = moran_auto.get_mixture_weights(train_labels, N)        
-        I = moran_auto.moran_mixture(train_loads[:, 0], train_labels, N)
+        I = moran_auto.moran_I(train_loads[:, 0], N, weights)
         expectation = moran_auto.moran_expectation(N)
         variance = moran_auto.moran_variance(train_loads[:, 0], weights, N)
         z_score = moran_auto.z_score(I, expectation, variance)
@@ -146,9 +161,19 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, verbose,
 
         morans_mixture.append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
 
-        # Getting spatial correlation statistics for Moran's I using mixture paid area connections.
-        weights = moran_auto.get_area_weights(train_active_index, N)        
-        I = moran_auto.moran_area(train_loads[:, 0], train_active_index, N)
+        # Getting spatial correlation statistics for Moran's I using mixture component distance connections.
+        weights = moran_auto.get_dist_mixture_weights(train_labels, gps_loc[train_mask], N)        
+        I = moran_auto.moran_I(train_loads[:, 0], N, weights)
+        expectation = moran_auto.moran_expectation(N)
+        variance = moran_auto.moran_variance(train_loads[:, 0], weights, N)
+        z_score = moran_auto.z_score(I, expectation, variance)
+        p_one_sided, p_two_sided = moran_auto.p_value(z_score)
+
+        morans_dist_mixture.append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
+
+        # Getting spatial correlation statistics for Moran's I using paid area connections.
+        weights = moran_auto.get_area_weights(train_active_index, N, area_map, subarea_to_key)        
+        I = moran_auto.moran_I(train_loads[:, 0], N, weights)
         expectation = moran_auto.moran_expectation(N)
         variance = moran_auto.moran_variance(train_loads[:, 0], weights, N)
         z_score = moran_auto.z_score(I, expectation, variance)
@@ -156,15 +181,42 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, verbose,
 
         morans_area.append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
 
-        # Getting spatial correlation statistics for Moran's I using nearest neighbor connections.
-        weights = moran_auto.get_neighbor_weights(gps_loc[train_mask], N, k)
-        I = moran_auto.moran_neighbor(train_loads[:, 0], gps_loc[train_mask], N, k)
+        # Getting spatial correlation statistics for Moran's I using paid area distance connections.
+        weights = moran_auto.get_dist_area_weights(train_active_index, gps_loc[train_mask], N, area_map, subarea_to_key)        
+        I = moran_auto.moran_I(train_loads[:, 0], N, weights)
         expectation = moran_auto.moran_expectation(N)
         variance = moran_auto.moran_variance(train_loads[:, 0], weights, N)
         z_score = moran_auto.z_score(I, expectation, variance)
         p_one_sided, p_two_sided = moran_auto.p_value(z_score)
 
-        morans_neighbor.append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
+        morans_dist_area.append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
+
+        # Getting spatial correlation statistics for Moran's I using distance connections.
+        weights = moran_auto.get_dist_weights(gps_loc[train_mask], N)        
+        I = moran_auto.moran_I(train_loads[:, 0], N, weights)
+        expectation = moran_auto.moran_expectation(N)
+        variance = moran_auto.moran_variance(train_loads[:, 0], weights, N)
+        z_score = moran_auto.z_score(I, expectation, variance)
+        p_one_sided, p_two_sided = moran_auto.p_value(z_score)
+
+        morans_dist.append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
+
+        # Getting spatial correlation statistics for Moran's I using nearest neighbor connections.
+        for k in k_vals:
+            weights = moran_auto.get_neighbor_weights(gps_loc[train_mask], N, k)
+            I = moran_auto.moran_I(train_loads[:, 0], N, weights)
+            expectation = moran_auto.moran_expectation(N)
+            variance = moran_auto.moran_variance(train_loads[:, 0], weights, N)
+            z_score = moran_auto.z_score(I, expectation, variance)
+            p_one_sided, p_two_sided = moran_auto.p_value(z_score)
+
+            morans_neighbor[k].append([I, expectation, variance, z_score, p_one_sided, p_two_sided])
+
+        gmm_var = np.array([train_loads[np.where(train_labels==comp)[0]].var() for comp in xrange(num_comps)]).mean()
+        gmm_vars.append(gmm_var)
+
+        sdot_var = np.array([train_loads[subarea_to_key[area]].var() for area in subarea_to_key]).mean()
+        sdot_vars.append(sdot_var)
 
         consistencies = []
 
@@ -215,7 +267,11 @@ def locational_demand_one_time(park_data, gps_loc, times, num_comps, k, verbose,
     # Average consistency for the particular day and hour combination.
     time_avg_consistency = round(np.array(average_consistencies).mean() * 100, 1)
 
+    gmm_var = np.array(gmm_vars).mean()
+    sdot_var = np.array(sdot_vars).mean()
+
     if verbose:
         print('Finished day %d and hour %d' % (day, hour))
 
-    return day, hour, time_avg_consistency, morans_mixture, morans_area, morans_neighbor, centers
+    return day, hour, time_avg_consistency, morans_mixture, morans_dist_mixture, \
+           morans_area, morans_dist_area, morans_dist, morans_neighbor, gmm_var, sdot_var, centers

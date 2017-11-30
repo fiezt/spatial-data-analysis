@@ -80,19 +80,21 @@ def get_data(month, year, file_path, verbose=False):
     transactions.to_csv(os.path.join(file_path, start_date_static + '_' + final_date + '.csv'), index=False)
 
 
-def get_supply(elkey, date, block_info):
+def get_supply(elkey, date, block_info, subarea):
     """Get the maximum supply (# spots) for an element key and date.
     
     :param elkey: Integer block-face element key to get the supply for.
     :param date: Datetime object in which to get the supply for.
     :param block_info: Dataframe containing blockface supply data.
+    :param subarea: String of zone to get occupancy data for.
     
     :return supply: Numpy array of the supply for the block.
     """
     
     block_supply = block_info.loc[block_info['ElementKey'] == elkey]
 
-    block_supply = block_supply[['ElementKey', 'EffectiveStartDate', 'EffectiveEndDate', 'ParkingSpaces']]
+    block_supply = block_supply[['PaidParkingArea', 'ElementKey', 
+                                 'EffectiveStartDate', 'EffectiveEndDate', 'ParkingSpaces']]
     
     block_supply.loc[:, 'EffectiveStartDate'] = pd.to_datetime(block_supply['EffectiveStartDate'])
     block_supply.loc[:, 'EffectiveEndDate'] = pd.to_datetime(block_supply['EffectiveEndDate'])
@@ -100,6 +102,10 @@ def get_supply(elkey, date, block_info):
     block_supply = block_supply.loc[block_supply['EffectiveStartDate'] <= date]
     block_supply = block_supply.loc[(block_supply['EffectiveEndDate'] >= date) | (block_supply['EffectiveEndDate'].isnull())]
     
+    # If not in the subarea at the date of interest it has no supply.
+    if subarea not in block_supply['PaidParkingArea'].values.tolist():
+        return False
+
     supply = block_supply['ParkingSpaces'].values
     
     return supply
@@ -140,11 +146,11 @@ def get_block_load(date, transactions, key, supply):
         time_datetime = time_duration[i, 1].to_pydatetime()
         
         # Get the time in seconds from the start of the day the transaction began at.
-        time_seconds = float(time_datetime.strftime('%s')) - float(date_python.strftime('%s'))
-        time_seconds /= 60.0
+        time_seconds = float((time_datetime - date_python).total_seconds())
+        time_minutes = time_seconds/60.0
         
         # Saving transaction start time and duration in minutes.
-        data.append([int(time_seconds), int(time_duration[i, 0])])
+        data.append([int(time_minutes), int(time_duration[i, 0])])
     
     start = np.zeros([1, 60*24])
     stop = np.zeros([1, 60*24])
@@ -209,9 +215,12 @@ def get_loads(month, year, subarea, block_info, transactions, data_path):
             curr_date = str(date.month) + '/' + str(date.day) + '/' + str(date.year)
 
             # Getting the supply that was active at the current date.
-            supply = get_supply(key, date, block_info)
+            supply = get_supply(key, date, block_info, subarea)
 
-            # If the supply is not 0 calculate loads otherwise set loads to nan since block is closed.
+            """
+            If the supply is not 0 or in a different subarea at the date calculate 
+            loads, otherwise set loads to nan since block is closed or in a different area.
+            """
             if supply:
                 block_load = get_block_load(curr_date, transactions, key, supply)
                 loads.append(block_load[0][0])

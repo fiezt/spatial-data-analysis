@@ -1,0 +1,8 @@
+pandas==0.20.3
+natgrid==0.2.1
+seaborn==0.8.1
+numpy==1.13.1
+gmplot==1.1.1
+matplotlib==2.0.2
+scipy==0.19.1
+scikit_learn==0.19.1
