@@ -2,9 +2,9 @@ import pickle
 import numpy as np
 import pandas as pd
 import os
-import process_data
 import gmm
 import figure_functions
+import process_data
 import kmeans_utils
 import write_results
 
@@ -12,20 +12,20 @@ import write_results
 curr_dir = os.getcwd()
 data_path = os.path.join(curr_dir, '..', 'data')
 belltown_path = os.path.join(data_path, 'Belltown_Hour')
-fig_path = os.path.join(curr_dir, '..', 'nature_figs')
-results_path = os.path.join(curr_dir, '..', 'nature_results')
+fig_path = os.path.join(curr_dir, '..', 'acc_figs')
+results_path = os.path.join(curr_dir, '..', 'acc_results')
 path = belltown_path
 pickle.dump('belltown', open(os.path.join(data_path, 'background_img_name.p'), 'wb'))
 
-time1 = 51
-time2 = 58
+time1 = 59
+time2 = 63
 num_comps = 4
 
 k_values = [3, 5, 10]
 p_value = .01
 
-month_year_start = (3, 2016)
-month_year_end = (7, 2016)
+month_year_start = (1, 2017)
+month_year_end = (7, 2017)
 
 params = process_data.load_data(data_path=data_path, load_paths=[path], 
                                 month_year_start=month_year_start, month_year_end=month_year_end, 
@@ -33,6 +33,8 @@ params = process_data.load_data(data_path=data_path, load_paths=[path],
 element_keys, loads, gps_loc, park_data, idx_to_day_hour, day_hour_to_idx = params
 
 
+figure_functions.temporal_day_plots(loads, fig_path, 
+                                    filename='temporal_day_plots.png')
 figure_functions.contour_plot(loads, gps_loc, time1, 
                               fig_path, filename='contours1.png')
 figure_functions.contour_plot(loads, gps_loc, time2, 
@@ -44,7 +46,7 @@ figure_functions.mixture_plot(loads, gps_loc, time2,
 
 area_map = pickle.load(open(os.path.join(data_path, 'belltown_subareas.p'), 'rb'))
 
-results = gmm.locational_demand_analysis(park_data, gps_loc, num_comps, 
+results = gmm.locational_demand_analysis(park_data, gps_loc, num_comps,
                                          k_values, area_map, verbose=False)
 
 days = [result[0] for result in results]
@@ -63,6 +65,7 @@ morans_dist_area = [result[6] for result in results]
 morans_dist = [result[7] for result in results]
 
 morans_neighbor = [result[8] for result in results]
+
 morans_3 = [neighbor[3] for neighbor in morans_neighbor]
 morans_5 = [neighbor[5] for neighbor in morans_neighbor]
 morans_10 = [neighbor[10] for neighbor in morans_neighbor]
