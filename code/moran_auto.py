@@ -1,115 +1,5 @@
 import numpy as np
-import os
-import pandas as pd
-from collections import defaultdict
 import scipy.stats as st
-
-
-def get_area_weights(train_active_index, N, area_map, subarea_to_key):
-    """Get the weight matrix for Moran I by using the paid area connections.
-
-    :param train_active_index: Numpy array of the active block-face keys.
-    :param N: Integer number of samples (locations).
-    :param data_path: File path to the paystation_info.csv.
-
-    :return weights: Numpy array of the weight matrix.
-    """
-
-    weights = np.zeros((N, N))
-    for i in xrange(N):
-        weights[i, subarea_to_key[area_map[train_active_index[i]]]] = 1
-        
-    di = np.diag_indices(N)
-    weights[di] = 0
-
-    return weights
-
-
-def get_dist_area_weights(train_active_index, gps_loc, N, area_map, subarea_to_key):
-    """Get the weight matrix for Moran I by using the paid area connections.
-
-    :param train_active_index: Numpy array of the active block-face keys.
-    :param N: Integer number of samples (locations).
-    :param data_path: File path to the paystation_info.csv.
-
-    :return weights: Numpy array of the weight matrix.
-    """
-
-    weights = np.zeros((N, N))
-    all_idx = range(N)
-
-    for i in xrange(N):
-        same_area = subarea_to_key[area_map[train_active_index[i]]]
-        diff_area = list(set(all_idx) - set(same_area))
-
-        dist = np.linalg.norm(gps_loc[i] - gps_loc, axis=1)**2
-        dist /= dist[same_area].max()
-        dist[diff_area] = 1
-        dist = -1*(1 - dist)
-
-        weights[i] = dist
-        
-    di = np.diag_indices(N)
-    weights[di] = 0
-
-    return weights
-
-
-def get_dist_weights(gps_loc, N):
-    """Get the weight matrix for Moran I by using k nearest neighbor connections.
-
-    :param gps_loc: Numpy array with each row containing the lat, long pair
-    midpoints for a block-face.
-    :param N: Integer number of samples (locations).
-    :param k: Integer number of neighbors to use for the weighting matrix.
-
-    :return weights: Numpy array of the weight matrix.
-    """
-
-    weights = np.zeros((N, N))
-
-    for i in xrange(N):
-        dist = np.linalg.norm(gps_loc[i] - gps_loc, axis=1)**2
-        dist /= dist.max()
-        dist = -1*(1 - dist)
-        weights[i] = dist
-
-    di = np.diag_indices(N)
-    weights[di] = 0
-
-    return weights
-
-
-def get_dist_mixture_weights(train_labels, gps_loc, N):
-    """Calculate the Moran I weight matrix using the mixture connections.
-
-    This function creates an weight matrix where each row represents a
-    block-face and if a block-face is in the same mixture component as another
-    it has a 1 in the corresponding column. The diagonal is 0.
-    
-    :param train_labels: Numpy array containing label for each data point.
-    :param N: Integer number of samples (locations).
-
-    :return weights: Numpy array of the weight matrix.
-    """
-
-    weights = np.zeros((N, N))
-
-    for i in xrange(N):
-        label = train_labels[i]
-        not_matching = np.where(train_labels != label)[0].tolist()
-        matching = np.where(train_labels == label)[0].tolist()
-
-        dist = np.linalg.norm(gps_loc[i] - gps_loc, axis=1)**2
-        dist /= dist[matching].max()
-        dist[not_matching] = 1
-        dist = -1*(1 - dist)
-        weights[i] = dist
-
-    di = np.diag_indices(N)
-    weights[di] = 0
-
-    return weights
 
 
 def get_neighbor_weights(gps_loc, N, k):
@@ -126,8 +16,92 @@ def get_neighbor_weights(gps_loc, N, k):
     weights = np.zeros((N, N))
 
     for i in xrange(N):
-        neighbors = np.vstack(sorted([(j, np.linalg.norm(gps_loc[i] - gps_loc[j])) for j in xrange(N)], key=lambda x: x[1])[1:k+1])[:, 0].astype('int')
+        # Finding the k-nearest neighbors.
+        neighbors = np.vstack(sorted([(j, np.linalg.norm(gps_loc[i] - gps_loc[j])) for j in xrange(N)],
+                                     key=lambda x: x[1])[1:k+1])[:, 0].astype('int')
         weights[i, neighbors] = 1
+
+    return weights
+
+
+def get_dist_weights(gps_loc, N):
+    """Get the weight matrix for Moran I by using distance based metric.
+
+    :param gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
+    :param N: Integer number of samples (locations).
+
+    :return weights: Numpy array of the weight matrix.
+    """
+
+    weights = np.zeros((N, N))
+
+    for i in xrange(N):
+        # Computing distance to each sample normalized between 0 and 1.
+        dist = np.linalg.norm(gps_loc[i] - gps_loc, axis=1)**2
+        dist /= dist.max()
+        dist = -1*(1 - dist)
+        weights[i] = dist
+
+    di = np.diag_indices(N)
+    weights[di] = 0
+
+    return weights
+
+
+def get_area_weights(train_active_index, N, area_map, subarea_to_key):
+    """Get the weight matrix for Moran I by using the paid area connections.
+
+    :param train_active_index: Numpy array of the active block-face keys.
+    :param N: Integer number of samples (locations).
+    :param area_map: Dictionary from key to subarea.
+    :param subarea_to_key: Dictionary from subarea to key.
+
+    :return weights: Numpy array of the weight matrix.
+    """
+
+    weights = np.zeros((N, N))
+    for i in xrange(N):
+        # Finding blocks in the same subarea.
+        weights[i, subarea_to_key[area_map[train_active_index[i]]]] = 1
+        
+    di = np.diag_indices(N)
+    weights[di] = 0
+
+    return weights
+
+
+def get_dist_area_weights(train_active_index, gps_loc, N, area_map, subarea_to_key):
+    """Get the weight matrix for Moran I by using the paid area connections by distance.
+
+    :param train_active_index: Numpy array of the active block-face keys.
+    :param gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
+    :param N: Integer number of samples (locations).
+    :param area_map: Dictionary from key to subarea.
+    :param subarea_to_key: Dictionary from subarea to key.
+
+    :return weights: Numpy array of the weight matrix.
+    """
+
+    weights = np.zeros((N, N))
+    all_idx = range(N)
+
+    for i in xrange(N):
+        # Finding blocks in the same and different areas.
+        same_area = subarea_to_key[area_map[train_active_index[i]]]
+        diff_area = list(set(all_idx) - set(same_area))
+
+        # Computing distance to each block in same subarea normalized between 0 and 1.
+        dist = np.linalg.norm(gps_loc[i] - gps_loc, axis=1)**2
+        dist /= dist[same_area].max()
+        dist[diff_area] = 1
+        dist = -1*(1 - dist)
+
+        weights[i] = dist
+        
+    di = np.diag_indices(N)
+    weights[di] = 0
 
     return weights
 
@@ -135,10 +109,6 @@ def get_neighbor_weights(gps_loc, N, k):
 def get_mixture_weights(train_labels, N):
     """Calculate the Moran I weight matrix using the mixture connections.
 
-    This function creates an weight matrix where each row represents a
-    block-face and if a block-face is in the same mixture component as another
-    it has a 1 in the corresponding column. The diagonal is 0.
-    
     :param train_labels: Numpy array containing label for each data point.
     :param N: Integer number of samples (locations).
 
@@ -158,11 +128,45 @@ def get_mixture_weights(train_labels, N):
     return weights
 
 
+def get_dist_mixture_weights(train_labels, gps_loc, N):
+    """Calculate the Moran I weight matrix using the mixture connections.
+    
+    :param train_labels: Numpy array containing label for each data point.
+    :param gps_loc: Numpy array with each row containing the lat, long pair
+    midpoints for a block-face.
+    :param N: Integer number of samples (locations).
+
+    :return weights: Numpy array of the weight matrix.
+    """
+
+    weights = np.zeros((N, N))
+
+    for i in xrange(N):
+        label = train_labels[i]
+
+        # Finding blocks with the same and different label.
+        not_matching = np.where(train_labels != label)[0].tolist()
+        matching = np.where(train_labels == label)[0].tolist()
+
+        # Computing distance to each block in same component normalized between 0 and 1.
+        dist = np.linalg.norm(gps_loc[i] - gps_loc, axis=1)**2
+        dist /= dist[matching].max()
+        dist[not_matching] = 1
+        dist = -1*(1 - dist)
+        weights[i] = dist
+
+    di = np.diag_indices(N)
+    weights[di] = 0
+
+    return weights
+
+
 def moran_I(x, N, weights):
     """Calculating the Moran I.
 
     :param x: Numpy array of the loads.
     :param N: Integer number of samples.
+    :param weights: Numpy array of the weight matrix.
 
     :return I: Float of Moran I.
     """
