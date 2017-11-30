@@ -22,6 +22,7 @@ from map_overlay import MapOverlay
 import seaborn as sns
 sns.reset_orig()
 
+
 # Getting the background figure name that is set.
 back_fig_name = pickle.load(open(os.path.join(os.getcwd(), '..',  'data', 'background_img_name.p'), 'rb'))
 
