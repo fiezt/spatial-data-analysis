@@ -189,8 +189,10 @@ def load_data(data_path, load_paths, month_year_start, month_year_end,
 
                 if not row_null['PeakHourStart3']:
 
-                    start3 = pd.Series([datetime.datetime.combine(block_data.loc[i, 'Date'], row['PeakHourStart3']) for i in xrange(len(block_data))])
-                    end3 = pd.Series([datetime.datetime.combine(block_data.loc[i, 'Date'], row['PeakHourEnd3']) for i in xrange(len(block_data))])
+                    start3 = pd.Series([datetime.datetime.combine(block_data.loc[i, 'Date'], row['PeakHourStart3'])
+                                        for i in xrange(len(block_data))])
+                    end3 = pd.Series([datetime.datetime.combine(block_data.loc[i, 'Date'], row['PeakHourEnd3'])
+                                      for i in xrange(len(block_data))])
 
                     if row_null['EffectiveEndDate']:
                         mask3 = ((row['EffectiveStartDate'] <= block_data['Datetime'])
@@ -208,7 +210,8 @@ def load_data(data_path, load_paths, month_year_start, month_year_end,
 
             # Getting the average load for each hour of the week for the block.
             avg_load = block_data.groupby(['Day', 'Hour'])['Load'].mean().values.reshape((1,-1))
-            
+
+            # If there is not data skip it.
             if avg_load.shape != (1, 72):
                 gps_loc.pop()
                 continue
