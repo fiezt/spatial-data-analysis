@@ -32,6 +32,8 @@ due to the nonconvex objective of GMM so figures and results may not be
 exactly the same as in the papers when running the analysis, but regardless
 the they will be close and the conclusions the same.
 
+If there are any problems, questions, or bugs, please email me at fiezt@uw.edu.
+
 # Dependencies
     pandas==0.20.3
     seaborn==0.8.1
