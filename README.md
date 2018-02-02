@@ -19,7 +19,7 @@ For the ITS paper:
      python its_belltown_denny.py
      python its_belltown_commcore.py
 
-For the Nature paper:
+For the Science paper:
 
      python science.py
 
