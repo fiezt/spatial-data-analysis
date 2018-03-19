@@ -4,6 +4,11 @@ This work is associated with the following publications:
 
 #### Tanner Fiez, Lillian Ratliff. "Data-Driven Spatio-Temporal Analysis of Curbside Parking Demand," submitted to IEEE Transactions on Intelligent Transportation Systems (ITS) 2018.
 
+<<<<<<< HEAD
+=======
+#### Chase Dowling, Tanner Fiez, Lillian Ratliff, Baosen Zhang. "Fusing data streams to model urban congestion caused by drivers cruising for curbside parking," submitted to Science 2018.
+
+>>>>>>> bcc73ca733b6c066bfcbb1bfe3a996a4fe700ddb
 #### Tanner Fiez, Lillian Ratliff, Chase Dowling, Baosen Zhang. "Data-Driven Spatio-Temporal Modeling of Parking Demand," submitted to American Control Conference (ACC) 2018.
 
 # Instructions
@@ -17,6 +22,12 @@ For the ITS paper:
      python its_belltown_denny.py
      python its_belltown_commcore.py
 
+<<<<<<< HEAD
+=======
+For the Science paper:
+
+     python science.py
+>>>>>>> bcc73ca733b6c066bfcbb1bfe3a996a4fe700ddb
 
 For the ACC paper:
 
